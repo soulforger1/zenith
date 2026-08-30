@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Produces .next/standalone/server.js — a minimal, self-contained server
+  // (pruned node_modules included) for the Electron shell to spawn directly,
+  // instead of shipping/reinstalling the full dev node_modules tree.
+  output: "standalone",
   // Cache Components implements Partial Prerendering: a static shell (nav
   // chrome, layout structure) is served instantly while dynamic,
   // per-request DB reads stream in behind <Suspense> boundaries — the
@@ -10,6 +14,15 @@ const nextConfig: NextConfig = {
   // instead of a full per-link prefetch — safe here, no <Link prefetch>
   // usages in the app to audit.
   partialPrefetching: true,
+  // Next's dev server only trusts "localhost" by default and silently blocks
+  // cross-origin requests for its own dev assets (HMR socket, JS chunks,
+  // fonts) from anything else — including 127.0.0.1, a *different* origin as
+  // far as this check is concerned. electron/main.js's dev-mode window
+  // explicitly loads http://127.0.0.1:3000 (see startAppServerAndOpenWindow),
+  // so without this, every client JS chunk silently fails to load: the page
+  // still renders (server HTML is unaffected) but nothing is interactive —
+  // no modals, no command palette, no click handlers at all.
+  allowedDevOrigins: ["127.0.0.1"],
   experimental: {
     // Next 15+ defaults this to 0 (always refetch on navigation, even for
     // pages you just visited). For a single-user app talking to a remote DB,

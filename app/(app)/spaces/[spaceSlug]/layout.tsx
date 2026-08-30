@@ -14,11 +14,11 @@ export default function SpaceLayout({
   params: Promise<{ spaceSlug: string }>;
 }) {
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <Suspense fallback={<SpaceHeaderSkeleton />}>
         <SpaceHeaderData params={params} />
       </Suspense>
-      <div className="flex-1 overflow-auto px-8 py-[26px]">{children}</div>
+      <div className="flex-1 min-h-0 overflow-y-auto px-8 py-[26px]">{children}</div>
     </div>
   );
 }

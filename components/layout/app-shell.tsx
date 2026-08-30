@@ -89,15 +89,29 @@ export function AppShell({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [activeSpaceSlug, router, closeAll]);
 
+  useEffect(() => {
+    // Only present inside the packaged desktop app (electron/preload-main.js)
+    // — undefined in a plain browser tab, e.g. `next dev`. AppShell is
+    // mounted once for the whole (app) route group, so this fires no matter
+    // which page is currently showing underneath.
+    return window.zenithDesktop?.onOpenPasteTaskModal(() => setAiModalOpen(true));
+  }, []);
+
   return (
     <AppShellContext.Provider value={{ openTask, openAiModal, openCommandPalette }}>
-      <div className="flex min-h-screen flex-1">
+      <div className="flex h-screen flex-1 overflow-hidden">
         <AppSidebar
           spaces={spaces}
           onPasteTask={openAiModal}
           onSearch={openCommandPalette}
         />
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex flex-1 min-h-0 flex-col overflow-hidden">
+          {/* Continues the sidebar's drag strip (components/layout/app-sidebar.tsx)
+              across the rest of the window's top edge, so the whole band is
+              grabbable, not just the sliver above the logo. */}
+          <div className="app-drag-region h-6 shrink-0" />
+          <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>
+        </main>
       </div>
 
       <TaskDetailDrawer

@@ -1,0 +1,32 @@
+# Personal single-developer packaging config — unsigned/unnotarized (no
+# Apple Developer Program membership), macOS-only, no auto-updater.
+appId: com.zolboo.zenith
+productName: Zenith
+directories:
+  output: release
+files:
+  - "!**/*"
+  - electron/dist/**/*
+  - package.json
+  # Shipped unbundled (not esbuild-inlined) since it's a native addon — see
+  # electron/scripts/build-electron.js's comment for why. node-gyp-build is
+  # its own runtime dependency, used to locate the right prebuilt binary.
+  - node_modules/uiohook-napi/**/*
+  - node_modules/node-gyp-build/**/*
+# A packed .asar archive can't dlopen a native .node binary from inside it —
+# this keeps uiohook-napi's compiled addon as real files on disk instead.
+asarUnpack:
+  - node_modules/uiohook-napi/**/*
+extraResources:
+  # from electron/app-server-staging, not .next/standalone directly — see
+  # electron/scripts/copy-standalone-assets.js for why (electron-builder
+  # hardcodes an exclusion for a copy root's immediate "node_modules" child).
+  - from: electron/app-server-staging
+    to: app-server
+    filter:
+      - "**/*"
+mac:
+  target: dmg
+  category: public.app-category.productivity
+  hardenedRuntime: false
+  icon: electron/build/icon.icns

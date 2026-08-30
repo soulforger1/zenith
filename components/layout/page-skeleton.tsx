@@ -51,12 +51,12 @@ export function CardGridSkeleton() {
  * layout's header while it resolves the space/views fetch. */
 export function SpaceHeaderSkeleton() {
   return (
-    <div className="border-b px-8 pt-[26px]">
-      <div className="mb-4 flex items-center justify-between">
-        <Skeleton className="h-6 w-40" />
+    <div className="shrink-0 border-b px-8 pt-2.5">
+      <div className="mb-2 flex items-center justify-between">
+        <Skeleton className="h-5 w-40" />
         <Skeleton className="h-4 w-24" />
       </div>
-      <div className="flex items-center gap-4 pb-[11px]">
+      <div className="flex items-center gap-4 pb-[7px]">
         <Skeleton className="h-4 w-16" />
         <Skeleton className="h-4 w-16" />
         <Skeleton className="h-4 w-16" />
@@ -71,15 +71,18 @@ export function SpaceHeaderSkeleton() {
  * boundary too (see app/(app)/layout.tsx for why). */
 export function AppShellSkeleton() {
   return (
-    <div className="flex min-h-screen flex-1">
-      <aside className="flex w-[260px] shrink-0 flex-col gap-2.5 border-r border-sidebar-border bg-sidebar p-4">
+    <div className="flex h-screen flex-1 overflow-hidden">
+      <aside className="flex h-screen w-[260px] shrink-0 flex-col gap-2.5 overflow-hidden border-r border-sidebar-border bg-sidebar p-4">
+        <div className="app-drag-region h-6 shrink-0" />
         <Skeleton className="mb-[22px] h-[26px] w-24" />
         <Skeleton className="mb-[22px] h-10 w-full" />
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-8 w-full" />
         ))}
       </aside>
-      <main className="flex-1" />
+      <main className="flex flex-1 min-h-0 flex-col overflow-hidden">
+        <div className="app-drag-region h-6 shrink-0" />
+      </main>
     </div>
   );
 }

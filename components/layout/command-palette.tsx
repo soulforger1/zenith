@@ -33,6 +33,7 @@ export function CommandPalette({
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
   const commands = useMemo(() => {
     const items: { id: string; icon: React.ReactNode; label: string; hint: string; onSelect: () => void }[] = [];
@@ -80,6 +81,21 @@ export function CommandPalette({
     cmd.onSelect();
     onOpenChange(false);
     setQuery("");
+    setSelectedIndex(0);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (filtered.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((i) => (i + 1) % filtered.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((i) => (i - 1 + filtered.length) % filtered.length);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      select(filtered[selectedIndex]);
+    }
   }
 
   return (
@@ -88,6 +104,7 @@ export function CommandPalette({
       onOpenChange={(next) => {
         onOpenChange(next);
         if (!next) setQuery("");
+        setSelectedIndex(0);
       }}
     >
       <DialogContent
@@ -97,7 +114,11 @@ export function CommandPalette({
         <Input
           autoFocus
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setSelectedIndex(0);
+          }}
+          onKeyDown={handleKeyDown}
           placeholder="Type a command or search…"
           className="rounded-none border-x-0 border-t-0 border-b px-4 py-5 text-[14.5px] shadow-none focus-visible:ring-0"
         />
@@ -106,10 +127,14 @@ export function CommandPalette({
             <button
               key={cmd.id}
               type="button"
+              ref={(el) => {
+                if (i === selectedIndex) el?.scrollIntoView({ block: "nearest" });
+              }}
               onClick={() => select(cmd)}
+              onMouseEnter={() => setSelectedIndex(i)}
               className={cn(
                 "flex w-full items-center gap-2.5 rounded-[7px] px-3 py-2.5 text-left text-[13.5px] transition-colors hover:bg-accent",
-                i === 0 && "bg-accent/60",
+                i === selectedIndex && "bg-accent/60",
               )}
             >
               <span className="w-5 text-center text-muted-foreground">{cmd.icon}</span>

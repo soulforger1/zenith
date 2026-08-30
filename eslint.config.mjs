@@ -12,6 +12,13 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Plain CommonJS Node scripts (Electron main/preload/build scripts) —
+    // a different runtime context from the Next.js app, intentionally
+    // using require() rather than the app's ESM/TypeScript conventions.
+    "electron/**",
+    // electron-builder's packaged app output (bundled/minified third-party
+    // code, not source this project owns).
+    "release/**",
   ]),
 ]);
 

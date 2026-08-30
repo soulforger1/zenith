@@ -34,9 +34,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const VIEW_TYPE_LABEL: Record<ViewType, string> = { table: "Table", board: "Board", roadmap: "Roadmap" };
+const VIEW_TYPE_LABEL: Record<ViewType, string> = {
+  table: "Table",
+  board: "Board",
+  roadmap: "Roadmap",
+};
 
 export type SpaceView = { id: string; name: string; type: ViewType };
 
@@ -60,9 +70,11 @@ export function SpaceHeader({
   ];
 
   return (
-    <div className="border-b px-8 pt-[26px]">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-[22px] font-semibold tracking-tight">{spaceName}</h1>
+    <div className="shrink-0 border-b px-8">
+      <div className="mb-2 flex items-center justify-between">
+        <h1 className="text-[19px] font-semibold tracking-tight">
+          {spaceName}
+        </h1>
         <button
           type="button"
           onClick={openCommandPalette}
@@ -81,7 +93,7 @@ export function SpaceHeader({
               <div
                 key={view.id}
                 className={cn(
-                  "group flex shrink-0 items-center gap-1 border-b-2 pb-[11px]",
+                  "group flex shrink-0 items-center gap-1 border-b-2 pb-[7px]",
                   active ? "border-primary" : "border-transparent",
                 )}
               >
@@ -89,12 +101,18 @@ export function SpaceHeader({
                   href={href}
                   className={cn(
                     "text-sm font-medium whitespace-nowrap transition-colors",
-                    active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+                    active
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {view.name}
                 </Link>
-                <ViewTabMenu view={view} spaceSlug={slug} disableDelete={views.length <= 1} />
+                <ViewTabMenu
+                  view={view}
+                  spaceSlug={slug}
+                  disableDelete={views.length <= 1}
+                />
               </div>
             );
           })}
@@ -108,7 +126,7 @@ export function SpaceHeader({
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  "border-b-2 pb-[11px] text-sm font-medium whitespace-nowrap transition-colors",
+                  "border-b-2 pb-[7px] text-sm font-medium whitespace-nowrap transition-colors",
                   active
                     ? "border-primary text-foreground"
                     : "border-transparent text-muted-foreground hover:text-foreground",
@@ -159,7 +177,9 @@ function ViewTabMenu({
 
   function handleSetDefault() {
     startTransition(() => {
-      setDefaultViewAction(view.id, spaceSlug).catch(() => toast.error("Couldn't set as default."));
+      setDefaultViewAction(view.id, spaceSlug).catch(() =>
+        toast.error("Couldn't set as default."),
+      );
     });
   }
 
@@ -187,11 +207,21 @@ function ViewTabMenu({
           <span className="sr-only">View options for {view.name}</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuItem onClick={() => setRenameOpen(true)}>Rename</DropdownMenuItem>
-          <DropdownMenuItem onClick={handleDuplicate}>Duplicate</DropdownMenuItem>
-          <DropdownMenuItem onClick={handleSetDefault}>Set as default</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setRenameOpen(true)}>
+            Rename
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleDuplicate}>
+            Duplicate
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleSetDefault}>
+            Set as default
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" disabled={disableDelete} onClick={handleDelete}>
+          <DropdownMenuItem
+            variant="destructive"
+            disabled={disableDelete}
+            onClick={handleDelete}
+          >
             Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -202,12 +232,19 @@ function ViewTabMenu({
           <DialogHeader>
             <DialogTitle>Rename view</DialogTitle>
           </DialogHeader>
-          <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+          />
           <DialogFooter>
             <Button variant="ghost" onClick={() => setRenameOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleRenameSave} disabled={pending || !name.trim()}>
+            <Button
+              onClick={handleRenameSave}
+              disabled={pending || !name.trim()}
+            >
               Save
             </Button>
           </DialogFooter>
@@ -217,7 +254,13 @@ function ViewTabMenu({
   );
 }
 
-function NewViewButton({ spaceId, spaceSlug }: { spaceId: string; spaceSlug: string }) {
+function NewViewButton({
+  spaceId,
+  spaceSlug,
+}: {
+  spaceId: string;
+  spaceSlug: string;
+}) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [type, setType] = useState<ViewType>("table");
@@ -227,9 +270,11 @@ function NewViewButton({ spaceId, spaceSlug }: { spaceId: string; spaceSlug: str
     const trimmed = name.trim();
     if (!trimmed) return;
     startTransition(() => {
-      createViewAction(spaceId, spaceSlug, { name: trimmed, type }).catch(() => {
-        toast.error("Couldn't create that view.");
-      });
+      createViewAction(spaceId, spaceSlug, { name: trimmed, type }).catch(
+        () => {
+          toast.error("Couldn't create that view.");
+        },
+      );
     });
   }
 
@@ -239,7 +284,7 @@ function NewViewButton({ spaceId, spaceSlug }: { spaceId: string; spaceSlug: str
         render={
           <button
             type="button"
-            className="shrink-0 pb-[11px] text-muted-foreground transition-colors hover:text-foreground"
+            className="shrink-0 pb-[7px] text-muted-foreground transition-colors hover:text-foreground"
           />
         }
       >
@@ -252,12 +297,24 @@ function NewViewButton({ spaceId, spaceSlug }: { spaceId: string; spaceSlug: str
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label className="mb-1.5 text-[11px] text-muted-foreground">Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sprint board" autoFocus />
+            <Label className="mb-1.5 text-[11px] text-muted-foreground">
+              Name
+            </Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Sprint board"
+              autoFocus
+            />
           </div>
           <div>
-            <Label className="mb-1.5 text-[11px] text-muted-foreground">Type</Label>
-            <Select value={type} onValueChange={(v) => setType((v ?? "table") as ViewType)}>
+            <Label className="mb-1.5 text-[11px] text-muted-foreground">
+              Type
+            </Label>
+            <Select
+              value={type}
+              onValueChange={(v) => setType((v ?? "table") as ViewType)}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>

@@ -153,4 +153,11 @@
     background: var(--border);
     border-radius: 4px;
   }
+  /* Lets the Electron window be dragged by this region despite the native
+     title bar being hidden (see electron/main.js's titleBarStyle: "hidden").
+     No-op in a plain browser tab (next dev, etc) — unrecognized CSS property. */
+  .app-drag-region {
+    -webkit-app-region: drag;
+    app-region: drag;
+  }
 }

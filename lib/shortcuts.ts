@@ -4,6 +4,7 @@
 // keydown handling in components/layout/app-shell.tsx.
 export const SHORTCUTS = [
   { keys: "C", desc: "Paste a task from your manager" },
+  { keys: "⌥⌥", desc: "Paste a task, from anywhere (desktop app)" },
   { keys: "⌘K", desc: "Open search & commands" },
   { keys: "1", desc: "Go to Milestones" },
   { keys: "2", desc: "Go to Settings" },
