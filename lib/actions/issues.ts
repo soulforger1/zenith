@@ -10,10 +10,17 @@ import {
   createIssue,
   createIssues,
   deleteIssue,
+  getChildIssues,
+  getIssueById,
+  getRepoIdsByIssueIds,
+  getSubtaskCountsByParentIds,
+  searchIssuesForSpace,
   updateIssueFields,
+  wouldCreateCycle,
   type IssueFieldPatch,
 } from "@/lib/db/queries/issues";
 import { issuePriorityValues, issueStatusValues, type IssuePriority, type IssueStatus } from "@/lib/db/schema";
+import { toIssueRecord, toIssueRecords, type IssueRecord } from "@/lib/issue-types";
 
 const customFieldValuesSchema = z.record(z.string(), z.unknown());
 
@@ -41,7 +48,7 @@ const fieldPatchSchema = z
     tags: z.array(z.string().trim().min(1).max(30)).max(8),
     branch: z.string().trim().max(100).nullable(),
     estimate: z.string().trim().max(20).nullable(),
-    subtasks: z.array(z.object({ text: z.string().min(1).max(200), done: z.boolean() })).max(30),
+    parentId: z.string().uuid().nullable(),
     milestoneId: z.string().uuid().nullable(),
     repoIds: z.array(z.string().uuid()).max(20),
     dueDate: z.string().nullable(),
@@ -200,4 +207,93 @@ export async function bulkUpdateIssuesPriorityAction(
 export async function bulkDeleteIssuesAction(ids: string[], spaceSlug: string): Promise<void> {
   await bulkDeleteIssues(ids);
   revalidatePath(`/spaces/${spaceSlug}`);
+}
+
+/** Builds a full IssueRecord for one issue — used wherever the drawer needs
+ * a task it wasn't handed as a prop (a parent breadcrumb, a freshly-created
+ * or freshly-linked child). */
+async function buildIssueRecord(id: string): Promise<IssueRecord | null> {
+  const issue = await getIssueById(id);
+  if (!issue) return null;
+  const [repoIdsByIssue, subtaskCountByIssue] = await Promise.all([
+    getRepoIdsByIssueIds([id]),
+    getSubtaskCountsByParentIds([id]),
+  ]);
+  return toIssueRecord(issue, repoIdsByIssue.get(id) ?? [], subtaskCountByIssue.get(id) ?? { total: 0, done: 0 });
+}
+
+/** Read wrappers the task detail drawer calls on open — kept off the initial
+ * page load's query set (see views/[viewId]/page.tsx) since a task's parent
+ * and children are only needed once its drawer is actually open. */
+export async function getIssueRecordAction(id: string): Promise<IssueRecord | null> {
+  return buildIssueRecord(id);
+}
+
+export async function getChildIssuesAction(parentId: string): Promise<IssueRecord[]> {
+  const children = await getChildIssues(parentId);
+  const [repoIdsByIssue, subtaskCountByIssue] = await Promise.all([
+    getRepoIdsByIssueIds(children.map((c) => c.id)),
+    getSubtaskCountsByParentIds(children.map((c) => c.id)),
+  ]);
+  return toIssueRecords(children, repoIdsByIssue, subtaskCountByIssue);
+}
+
+/** Quick-add a subtask from the drawer — looks up the parent to inherit its
+ * `spaceId` so the drawer doesn't need to carry that around separately. */
+export async function createSubtaskAction(
+  parentId: string,
+  spaceSlug: string,
+  title: string,
+): Promise<IssueRecord | null> {
+  const cleanTitle = title.trim();
+  if (!cleanTitle) return null;
+  const parent = await getIssueById(parentId);
+  if (!parent) throw new Error("Parent task not found.");
+  const created = await createIssue({ spaceId: parent.spaceId, title: cleanTitle, parentId });
+  revalidatePath(`/spaces/${spaceSlug}`);
+  return toIssueRecord(created, [], { total: 0, done: 0 });
+}
+
+/** Bulk variant for the "Generate ✦" AI flow — same parent-id lookup as
+ * createSubtaskAction, one insert for every generated title. */
+export async function createSubtasksFromTitlesAction(
+  parentId: string,
+  spaceSlug: string,
+  titles: string[],
+): Promise<IssueRecord[]> {
+  const cleanTitles = titles.map((t) => t.trim()).filter(Boolean);
+  if (cleanTitles.length === 0) return [];
+  const parent = await getIssueById(parentId);
+  if (!parent) throw new Error("Parent task not found.");
+  const created = await createIssues(
+    parent.spaceId,
+    cleanTitles.map((title) => ({ title, parentId })),
+  );
+  revalidatePath(`/spaces/${spaceSlug}`);
+  return toIssueRecords(created);
+}
+
+/** Links/unlinks a task to a parent — `parentId: null` promotes it back to
+ * a standalone task. Guarded against creating a cycle (a task can't become
+ * an ancestor of its own ancestor). */
+export async function setParentAction(id: string, spaceSlug: string, parentId: string | null): Promise<void> {
+  if (parentId !== null) {
+    if (parentId === id) throw new Error("A task can't be its own subtask.");
+    if (await wouldCreateCycle(id, parentId)) {
+      throw new Error("That would create a loop of subtasks.");
+    }
+  }
+  await updateIssueFields(id, { parentId });
+  revalidatePath(`/spaces/${spaceSlug}`);
+}
+
+/** Live search backing the drawer's "Link existing…" picker — derives
+ * `spaceId` from the task being edited so callers only need to pass ids. */
+export async function searchIssuesForSubtaskAction(
+  taskId: string,
+  query: string,
+): Promise<{ id: string; title: string }[]> {
+  const task = await getIssueById(taskId);
+  if (!task) return [];
+  return searchIssuesForSpace(task.spaceId, query, [taskId]);
 }

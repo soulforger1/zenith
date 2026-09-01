@@ -2,6 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { CornerDownRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { PRIORITY_DOT_CLASS } from "@/lib/priority";
@@ -28,7 +29,6 @@ export function KanbanCard({
   overlay?: boolean;
 }) {
   const { openTask } = useAppShell();
-  const doneSubtasks = issue.subtasks.filter((s) => s.done).length;
   const visibleFields = visibleFieldIds
     .map((id) => registry.find((f) => f.id === id))
     .filter((f): f is FieldDef => Boolean(f));
@@ -43,6 +43,9 @@ export function KanbanCard({
     >
       <div className="flex items-start gap-1.5">
         <span className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", PRIORITY_DOT_CLASS[issue.priority])} />
+        {issue.parentId ? (
+          <CornerDownRight className="mt-0.5 size-3 shrink-0 text-muted-foreground" aria-label="Subtask" />
+        ) : null}
         <span className="text-[13.5px] leading-snug font-medium">{issue.title}</span>
       </div>
 
@@ -59,16 +62,16 @@ export function KanbanCard({
         </div>
       ) : null}
 
-      {issue.subtasks.length > 0 ? (
+      {issue.subtaskCount.total > 0 ? (
         <div className="flex items-center gap-1.5">
           <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
             <div
               className="h-full bg-primary"
-              style={{ width: `${Math.round((doneSubtasks / issue.subtasks.length) * 100)}%` }}
+              style={{ width: `${Math.round((issue.subtaskCount.done / issue.subtaskCount.total) * 100)}%` }}
             />
           </div>
           <span className="font-mono text-[10.5px] text-muted-foreground">
-            {doneSubtasks}/{issue.subtasks.length}
+            {issue.subtaskCount.done}/{issue.subtaskCount.total}
           </span>
         </div>
       ) : null}

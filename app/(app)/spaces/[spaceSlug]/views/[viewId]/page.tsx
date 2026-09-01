@@ -3,12 +3,20 @@ import { notFound } from "next/navigation";
 
 import { getSpaceBySlug } from "@/lib/db/queries/spaces";
 import { getViewById } from "@/lib/db/queries/views";
-import { getIssuesForSpace, getRepoIdsByIssueIds } from "@/lib/db/queries/issues";
+import {
+  getIssuesForSpace,
+  getRepoIdsByIssueIds,
+  getSubtaskCountsByParentIds,
+} from "@/lib/db/queries/issues";
 import { getMilestonesForSpace } from "@/lib/db/queries/milestones";
 import { getReposForSpace } from "@/lib/db/queries/repos";
 import { getCustomFieldsForSpace } from "@/lib/db/queries/custom-fields";
 import { toIssueRecord, toIssueRecords } from "@/lib/issue-types";
-import type { BoardViewConfig, RoadmapViewConfig, TableViewConfig } from "@/lib/views/types";
+import type {
+  BoardViewConfig,
+  RoadmapViewConfig,
+  TableViewConfig,
+} from "@/lib/views/types";
 import { QuickAddTask } from "@/components/issues/quick-add-task";
 import { TableView } from "@/components/views/table-view";
 import { KanbanBoard } from "@/components/board/kanban-board";
@@ -45,20 +53,32 @@ async function SpaceViewPageBody({
     getReposForSpace(space.id),
     getCustomFieldsForSpace(space.id),
   ]);
-  const repoIdsByIssue = await getRepoIdsByIssueIds(issues.map((issue) => issue.id));
+  const issueIds = issues.map((issue) => issue.id);
+  const [repoIdsByIssue, subtaskCountByIssue] = await Promise.all([
+    getRepoIdsByIssueIds(issueIds),
+    getSubtaskCountsByParentIds(issueIds),
+  ]);
 
-  const milestoneOptions = milestones.map((m) => ({ id: m.id, title: m.title }));
+  const milestoneOptions = milestones.map((m) => ({
+    id: m.id,
+    title: m.title,
+  }));
   const repoOptions = repos.map((r) => ({ id: r.id, name: r.name }));
 
   if (view.type === "table") {
     return (
       <div className="space-y-3">
         <div className="flex justify-end">
-          <QuickAddTask spaceId={space.id} spaceSlug={space.slug} status="backlog" label="New task" />
+          <QuickAddTask
+            spaceId={space.id}
+            spaceSlug={space.slug}
+            status="backlog"
+            label="New task"
+          />
         </div>
         <TableView
           view={{ id: view.id, config: view.config as TableViewConfig }}
-          issues={toIssueRecords(issues, repoIdsByIssue)}
+          issues={toIssueRecords(issues, repoIdsByIssue, subtaskCountByIssue)}
           spaceId={space.id}
           spaceSlug={space.slug}
           customFields={customFields}
@@ -74,7 +94,11 @@ async function SpaceViewPageBody({
       <KanbanBoard
         view={{ id: view.id, config: view.config as BoardViewConfig }}
         issues={issues.map((issue) => ({
-          ...toIssueRecord(issue, repoIdsByIssue.get(issue.id) ?? []),
+          ...toIssueRecord(
+            issue,
+            repoIdsByIssue.get(issue.id) ?? [],
+            subtaskCountByIssue.get(issue.id) ?? { total: 0, done: 0 },
+          ),
           position: issue.position,
         }))}
         spaceId={space.id}
@@ -89,7 +113,7 @@ async function SpaceViewPageBody({
   return (
     <RoadmapView
       view={{ id: view.id, config: view.config as RoadmapViewConfig }}
-      issues={toIssueRecords(issues, repoIdsByIssue)}
+      issues={toIssueRecords(issues, repoIdsByIssue, subtaskCountByIssue)}
       spaceId={space.id}
       spaceSlug={space.slug}
       customFields={customFields}

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { getSpaceBySlug } from "@/lib/db/queries/spaces";
 import { getMilestoneById, getMilestonesForSpace } from "@/lib/db/queries/milestones";
-import { getIssuesForMilestone, getRepoIdsByIssueIds } from "@/lib/db/queries/issues";
+import { getIssuesForMilestone, getRepoIdsByIssueIds, getSubtaskCountsByParentIds } from "@/lib/db/queries/issues";
 import { getReposForSpace } from "@/lib/db/queries/repos";
 import { updateMilestoneAction } from "@/lib/actions/milestones";
 import { toIssueRecords } from "@/lib/issue-types";
@@ -42,7 +42,11 @@ async function MilestoneDetailPageBody({
     getMilestonesForSpace(space.id),
     getReposForSpace(space.id),
   ]);
-  const repoIdsByIssue = await getRepoIdsByIssueIds(issues.map((issue) => issue.id));
+  const issueIds = issues.map((issue) => issue.id);
+  const [repoIdsByIssue, subtaskCountByIssue] = await Promise.all([
+    getRepoIdsByIssueIds(issueIds),
+    getSubtaskCountsByParentIds(issueIds),
+  ]);
   const closed = issues.filter((issue) => issue.isClosed).length;
   const boundUpdate = updateMilestoneAction.bind(null, milestone.id, space.slug);
   const isClosed = milestone.status === "closed";
@@ -80,7 +84,7 @@ async function MilestoneDetailPageBody({
       </div>
       <MilestoneProgressBar closed={closed} total={issues.length} />
       <IssueListClient
-        issues={toIssueRecords(issues, repoIdsByIssue)}
+        issues={toIssueRecords(issues, repoIdsByIssue, subtaskCountByIssue)}
         spaceSlug={space.slug}
         milestones={milestones}
         repos={repos}

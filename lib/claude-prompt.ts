@@ -1,9 +1,7 @@
-import type { Subtask } from "@/lib/db/schema";
-
 export type TaskPromptInput = {
   title: string;
   description: string;
-  subtasks: Subtask[];
+  subtasks: { title: string; done: boolean }[];
 };
 
 /** Builds a ready-to-paste prompt summarizing a task, for kicking off work on
@@ -20,7 +18,7 @@ export function buildTaskPrompt(task: TaskPromptInput): string {
 
   if (task.subtasks.length > 0) {
     lines.push("", "Subtasks:");
-    for (const st of task.subtasks) lines.push(`- [${st.done ? "x" : " "}] ${st.text}`);
+    for (const st of task.subtasks) lines.push(`- [${st.done ? "x" : " "}] ${st.title}`);
   }
 
   lines.push("", "Please implement this.");

@@ -43,6 +43,13 @@
       "when": 1787644296934,
       "tag": "0005_powerful_agent_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788257943995,
+      "tag": "0006_round_prowler",
+      "breakpoints": true
     }
   ]
 }

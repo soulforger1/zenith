@@ -1,4 +1,5 @@
 import {
+  type AnyPgColumn,
   boolean,
   date,
   doublePrecision,
@@ -181,8 +182,6 @@ export type IssueStatus = (typeof issueStatusValues)[number];
 export const issuePriorityValues = ["low", "medium", "high"] as const;
 export type IssuePriority = (typeof issuePriorityValues)[number];
 
-export type Subtask = { text: string; done: boolean };
-
 export const issues = pgTable(
   "issues",
   {
@@ -193,6 +192,12 @@ export const issues = pgTable(
     milestoneId: uuid("milestone_id").references(() => milestones.id, {
       onDelete: "set null",
     }),
+    // Subtasks are just tasks whose `parentId` points at another task
+    // (self-referential FK, GitHub-sub-issues-style) rather than a separate
+    // checklist field — so they get their own status/priority/dates and can
+    // be opened in their own drawer. Deleting the parent unlinks (not
+    // deletes) its subtasks, promoting them back to standalone tasks.
+    parentId: uuid("parent_id").references((): AnyPgColumn => issues.id, { onDelete: "set null" }),
     title: text("title").notNull(),
     description: text("description"),
     status: text("status").notNull().default("backlog"),
@@ -201,7 +206,6 @@ export const issues = pgTable(
     tags: text("tags").array().notNull().default([]),
     branch: text("branch"),
     estimate: text("estimate"),
-    subtasks: jsonb("subtasks").$type<Subtask[]>().notNull().default([]),
     dueDate: date("due_date"),
     // First-class start date alongside `dueDate`, so a Roadmap view has a
     // built-in date range to draw from without forcing a custom field.
@@ -220,6 +224,7 @@ export const issues = pgTable(
   (table) => [
     index("issues_space_id_status_idx").on(table.spaceId, table.status),
     index("issues_milestone_id_idx").on(table.milestoneId),
+    index("issues_parent_id_idx").on(table.parentId),
   ],
 );
 

@@ -1,10 +1,11 @@
 import "server-only";
 
 import { connection } from "next/server";
-import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, max, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, lte, max, ne, notInArray, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { type IssuePriority, type IssueStatus, type Subtask, issueRepos, issues, spaces } from "@/lib/db/schema";
+import { type IssuePriority, type IssueStatus, issueRepos, issues, spaces } from "@/lib/db/schema";
+import type { SubtaskCount } from "@/lib/issue-types";
 import { positionAtEnd } from "@/lib/position";
 
 /** Repo ids linked to each of `issueIds`, batched into one query — mirrors
@@ -55,7 +56,7 @@ export async function createIssue(input: {
   tags?: string[];
   branch?: string | null;
   estimate?: string | null;
-  subtasks?: Subtask[];
+  parentId?: string | null;
   milestoneId?: string | null;
   repoIds?: string[];
   dueDate?: string | null;
@@ -81,7 +82,7 @@ export async function createIssue(input: {
       tags: input.tags ?? [],
       branch: input.branch ?? null,
       estimate: input.estimate ?? null,
-      subtasks: input.subtasks ?? [],
+      parentId: input.parentId ?? null,
       milestoneId: input.milestoneId ?? null,
       dueDate: input.dueDate ?? null,
       startDate: input.startDate ?? null,
@@ -108,6 +109,7 @@ export async function createIssues(
     tags?: string[];
     branch?: string | null;
     estimate?: string | null;
+    parentId?: string | null;
     dueDate?: string | null;
     repoIds?: string[];
     milestoneId?: string | null;
@@ -134,6 +136,7 @@ export async function createIssues(
       tags: draft.tags ?? [],
       branch: draft.branch ?? null,
       estimate: draft.estimate ?? null,
+      parentId: draft.parentId ?? null,
       dueDate: draft.dueDate ?? null,
       milestoneId: draft.milestoneId ?? null,
       customFieldValues: draft.customFieldValues ?? {},
@@ -161,7 +164,7 @@ export type IssueFieldPatch = Partial<{
   tags: string[];
   branch: string | null;
   estimate: string | null;
-  subtasks: Subtask[];
+  parentId: string | null;
   milestoneId: string | null;
   repoIds: string[];
   dueDate: string | null;
@@ -216,6 +219,69 @@ export async function updateIssueFields(id: string, patch: IssueFieldPatch) {
 
 export async function deleteIssue(id: string) {
   await db.delete(issues).where(eq(issues.id, id));
+}
+
+/** {total, done} per parent, for every id in `parentIds`, in one query —
+ * same batched-flat-select-plus-Map style as getRepoIdsByIssueIds, using
+ * `isClosed` for "done" like getMilestoneProgressForSpace does. */
+export async function getSubtaskCountsByParentIds(parentIds: string[]): Promise<Map<string, SubtaskCount>> {
+  const map = new Map<string, SubtaskCount>();
+  if (parentIds.length === 0) return map;
+  const rows = await db
+    .select({ parentId: issues.parentId, isClosed: issues.isClosed })
+    .from(issues)
+    .where(inArray(issues.parentId, parentIds));
+  for (const row of rows) {
+    if (!row.parentId) continue;
+    const entry = map.get(row.parentId) ?? { total: 0, done: 0 };
+    entry.total += 1;
+    if (row.isClosed) entry.done += 1;
+    map.set(row.parentId, entry);
+  }
+  return map;
+}
+
+/** A task's immediate children, for rendering the drawer's subtask list. */
+export async function getChildIssues(parentId: string) {
+  return db
+    .select()
+    .from(issues)
+    .where(eq(issues.parentId, parentId))
+    .orderBy(asc(issues.position), asc(issues.createdAt));
+}
+
+/** True if setting `candidateParentId` as `taskId`'s parent would create a
+ * cycle — i.e. `candidateParentId` is `taskId` itself, or already descends
+ * from it. Walks candidateParentId's ancestor chain looking for taskId,
+ * capped so a data bug can't spin this into an infinite loop. */
+export async function wouldCreateCycle(taskId: string, candidateParentId: string): Promise<boolean> {
+  let current: string | null = candidateParentId;
+  for (let hops = 0; current !== null && hops < 50; hops++) {
+    if (current === taskId) return true;
+    const issue = await getIssueById(current);
+    current = issue?.parentId ?? null;
+  }
+  return false;
+}
+
+/** Title search within a space, for the "link existing task as subtask"
+ * picker — excludes `excludeIds` (the task itself and anything already
+ * ruled out by the caller) and caps results for a fast-typing autocomplete. */
+export async function searchIssuesForSpace(spaceId: string, query: string, excludeIds: string[] = []) {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+  return db
+    .select({ id: issues.id, title: issues.title })
+    .from(issues)
+    .where(
+      and(
+        eq(issues.spaceId, spaceId),
+        ilike(issues.title, `%${trimmed}%`),
+        excludeIds.length > 0 ? notInArray(issues.id, excludeIds) : undefined,
+      ),
+    )
+    .orderBy(asc(issues.title))
+    .limit(20);
 }
 
 /** Bulk actions from the list view's selection toolbar — same `isClosed`

@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { format } from "date-fns";
+import { CornerDownRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
@@ -52,6 +53,9 @@ export function IssueRow({
       />
       <div className="flex min-w-0 items-center gap-2 overflow-hidden">
         <span className={cn("size-1.5 shrink-0 rounded-full", PRIORITY_DOT_CLASS[issue.priority as IssuePriority])} />
+        {issue.parentId ? (
+          <CornerDownRight className="size-3 shrink-0 text-muted-foreground" aria-label="Subtask" />
+        ) : null}
         <span
           className={cn(
             "truncate",

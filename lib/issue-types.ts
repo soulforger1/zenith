@@ -1,4 +1,6 @@
-import type { IssuePriority, IssueStatus, Subtask, issues } from "@/lib/db/schema";
+import type { IssuePriority, IssueStatus, issues } from "@/lib/db/schema";
+
+export type SubtaskCount = { total: number; done: number };
 
 /** The subset of an issue's fields the UI (list rows, kanban cards, the
  * task detail drawer) actually needs — narrows Drizzle's `text` columns
@@ -12,7 +14,8 @@ export type IssueRecord = {
   tags: string[];
   branch: string | null;
   estimate: string | null;
-  subtasks: Subtask[];
+  parentId: string | null;
+  subtaskCount: SubtaskCount;
   dueDate: string | null;
   startDate: string | null;
   milestoneId: string | null;
@@ -23,9 +26,10 @@ export type IssueRecord = {
 type IssueRow = typeof issues.$inferSelect;
 
 /** `repoIds` isn't a column on the issue row anymore (many-to-many via
- * issue_repos) — the caller must fetch it separately (see
- * getRepoIdsByIssueIds) and pass it in here. */
-export function toIssueRecord(row: IssueRow, repoIds: string[] = []): IssueRecord {
+ * issue_repos) and `subtaskCount` isn't a column at all (derived from child
+ * rows) — the caller must fetch these separately (see getRepoIdsByIssueIds
+ * and getSubtaskCountsByParentIds) and pass them in here. */
+export function toIssueRecord(row: IssueRow, repoIds: string[] = [], subtaskCount: SubtaskCount = { total: 0, done: 0 }): IssueRecord {
   return {
     id: row.id,
     title: row.title,
@@ -35,7 +39,8 @@ export function toIssueRecord(row: IssueRow, repoIds: string[] = []): IssueRecor
     tags: row.tags,
     branch: row.branch,
     estimate: row.estimate,
-    subtasks: row.subtasks,
+    parentId: row.parentId,
+    subtaskCount,
     dueDate: row.dueDate,
     startDate: row.startDate,
     milestoneId: row.milestoneId,
@@ -44,6 +49,12 @@ export function toIssueRecord(row: IssueRow, repoIds: string[] = []): IssueRecor
   };
 }
 
-export function toIssueRecords(rows: IssueRow[], repoIdsByIssue: Map<string, string[]> = new Map()): IssueRecord[] {
-  return rows.map((row) => toIssueRecord(row, repoIdsByIssue.get(row.id) ?? []));
+export function toIssueRecords(
+  rows: IssueRow[],
+  repoIdsByIssue: Map<string, string[]> = new Map(),
+  subtaskCountByIssue: Map<string, SubtaskCount> = new Map(),
+): IssueRecord[] {
+  return rows.map((row) =>
+    toIssueRecord(row, repoIdsByIssue.get(row.id) ?? [], subtaskCountByIssue.get(row.id) ?? { total: 0, done: 0 }),
+  );
 }
