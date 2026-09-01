@@ -23,7 +23,9 @@ export function SpaceCard({
         </CardHeader>
         <CardContent className="space-y-2">
           {description ? (
-            <p className="line-clamp-2 text-sm text-muted-foreground">{description}</p>
+            <p className="line-clamp-2 text-sm text-muted-foreground">
+              {description}
+            </p>
           ) : null}
           <p className="font-mono text-xs text-muted-foreground">
             {openCount} open · {totalCount} total

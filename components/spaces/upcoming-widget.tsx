@@ -25,7 +25,9 @@ export function UpcomingWidget({ issues }: { issues: UpcomingIssue[] }) {
         </span>
       </div>
       {issues.length === 0 ? (
-        <p className="px-4 py-6 text-center text-sm text-muted-foreground">Nothing due this week.</p>
+        <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+          Nothing due this week.
+        </p>
       ) : (
         <div className="divide-y">
           {issues.map((issue) => {
@@ -36,7 +38,12 @@ export function UpcomingWidget({ issues }: { issues: UpcomingIssue[] }) {
                 href={`/spaces/${issue.spaceSlug}`}
                 className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] transition-colors hover:bg-accent/40"
               >
-                <span className={cn("size-1.5 shrink-0 rounded-full", PRIORITY_DOT_CLASS[issue.priority])} />
+                <span
+                  className={cn(
+                    "size-1.5 shrink-0 rounded-full",
+                    PRIORITY_DOT_CLASS[issue.priority],
+                  )}
+                />
                 <span className="flex-1 truncate">{issue.title}</span>
                 <span className="rounded-[5px] bg-muted px-1.5 py-0.5 font-mono text-[10.5px] text-muted-foreground">
                   {issue.spaceName}
@@ -44,7 +51,9 @@ export function UpcomingWidget({ issues }: { issues: UpcomingIssue[] }) {
                 <span
                   className={cn(
                     "font-mono text-[11px]",
-                    overdue ? "font-semibold text-destructive" : "text-muted-foreground",
+                    overdue
+                      ? "font-semibold text-destructive"
+                      : "text-muted-foreground",
                   )}
                 >
                   {format(new Date(issue.dueDate), "MMM d")}

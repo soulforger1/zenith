@@ -17,7 +17,11 @@ export default function SpaceIndexPage({
   );
 }
 
-async function SpaceIndexRedirect({ params }: { params: Promise<{ spaceSlug: string }> }) {
+async function SpaceIndexRedirect({
+  params,
+}: {
+  params: Promise<{ spaceSlug: string }>;
+}) {
   const { spaceSlug } = await params;
   const space = await getSpaceBySlug(spaceSlug);
   if (!space) notFound();
