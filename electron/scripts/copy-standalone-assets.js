@@ -36,3 +36,19 @@ fs.rmSync(staging, { recursive: true, force: true });
 fs.cpSync(standalone, path.join(staging, "app"), { recursive: true });
 
 console.log("Staged .next/standalone into electron/app-server-staging/app for packaging.");
+
+// `sharp` (+ its native @img/sharp-* binaries, ~27MB) powers Next's built-in
+// /_next/image optimizer, which every Next app registers unconditionally —
+// even this one, with zero next/image usages and images.unoptimized: true
+// in next.config.ts. Next's own build-trace code only skips sharp from the
+// standalone output when building *on Vercel's infrastructure*
+// (collect-build-traces.js gates it behind an internal hasNextSupport
+// check) — there's no next.config.ts flag that reaches a plain local build
+// like this one, so it's always traced in regardless of config. Since the
+// optimizer code path that would require() it is provably unreachable here,
+// it's safe to just delete post-build instead.
+const deadWeightDirs = ["sharp", "@img"].map((name) => path.join(staging, "app", "node_modules", name));
+for (const dir of deadWeightDirs) {
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+console.log("Pruned unused node_modules/{sharp,@img} (Next's image optimizer isn't used by this app).");

@@ -14,6 +14,30 @@ const nextConfig: NextConfig = {
   // instead of a full per-link prefetch — safe here, no <Link prefetch>
   // usages in the app to audit.
   partialPrefetching: true,
+  // @anthropic-ai/claude-agent-sdk resolves its actual `claude` CLI binary
+  // from an optional platform package (e.g. claude-agent-sdk-darwin-arm64)
+  // via a *dynamic* require built from process.platform/arch at runtime —
+  // Next's build-time file tracer (@vercel/nft) can only follow static
+  // require()/import() calls, so it silently drops that package from
+  // .next/standalone entirely. Works in `next dev` (full node_modules on
+  // disk) but breaks in the packaged Electron app, which only ships what
+  // got traced — surfaced as "Native CLI binary for darwin-arm64 not found"
+  // from the paste-task/AI modal. This forces it back in for the three
+  // routes that actually spawn the SDK (see app/api/ai/*/route.ts).
+  outputFileTracingIncludes: {
+    "/api/ai/*": ["./node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/**/*"],
+  },
+  // Next registers its /_next/image optimization endpoint (and traces in
+  // `sharp` + its native @img/sharp-* binaries, ~27MB) unconditionally in
+  // every app, even with zero next/image usages — which this app has none
+  // of (images are stored as base64 data URLs, see serverActions
+  // .bodySizeLimit below). Route-scoped outputFileTracingExcludes can't
+  // reach that internal route since it isn't one of ours; this is the
+  // actual purpose-built flag to opt out of the optimizer (and its sharp
+  // dependency) entirely.
+  images: {
+    unoptimized: true,
+  },
   // Next's dev server only trusts "localhost" by default and silently blocks
   // cross-origin requests for its own dev assets (HMR socket, JS chunks,
   // fonts) from anything else — including 127.0.0.1, a *different* origin as
