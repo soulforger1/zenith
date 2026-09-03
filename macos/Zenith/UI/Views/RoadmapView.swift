@@ -22,7 +22,7 @@ struct RoadmapView: View {
     }
 
     private var registry: [FieldDef] {
-        FieldRegistry.build(customFields: model.customFields, milestones: model.milestones)
+        FieldRegistry.build(customFields: model.customFields, milestones: model.milestones, repos: model.repos)
     }
 
     private var hasDateOrIterationField: Bool {

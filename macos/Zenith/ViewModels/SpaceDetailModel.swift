@@ -138,6 +138,35 @@ final class SpaceDetailModel {
         }
     }
 
+    // MARK: - Bulk actions (Table view's selection toolbar)
+
+    func bulkUpdateStatus(_ ids: [UUID], status: IssueStatus) async {
+        do {
+            try await IssueActions.bulkUpdateStatus(database, ids: ids, status: status)
+            await load()
+        } catch {
+            loadError = error.diagnosticDescription
+        }
+    }
+
+    func bulkUpdatePriority(_ ids: [UUID], priority: IssuePriority) async {
+        do {
+            try await IssueActions.bulkUpdatePriority(database, ids: ids, priority: priority)
+            await load()
+        } catch {
+            loadError = error.diagnosticDescription
+        }
+    }
+
+    func bulkDelete(_ ids: [UUID]) async {
+        do {
+            try await IssueActions.bulkDeleteIssues(database, ids: ids)
+            issues.removeAll { ids.contains($0.id) }
+        } catch {
+            loadError = error.diagnosticDescription
+        }
+    }
+
     // MARK: - Task detail
 
     func issueRecord(_ id: UUID) async -> IssueRecord? {

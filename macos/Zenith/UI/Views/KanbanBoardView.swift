@@ -25,7 +25,7 @@ struct KanbanBoardView: View {
     }
 
     private var registry: [FieldDef] {
-        FieldRegistry.build(customFields: model.customFields, milestones: model.milestones)
+        FieldRegistry.build(customFields: model.customFields, milestones: model.milestones, repos: model.repos)
     }
 
     private var groupField: FieldDef {
@@ -119,7 +119,7 @@ struct KanbanBoardView: View {
         case .status: updated.status = groupKey.flatMap(IssueStatus.init(rawValue:)) ?? .backlog
         case .priority: updated.priority = groupKey.flatMap(IssuePriority.init(rawValue:)) ?? .medium
         case .milestone: updated.milestoneId = groupKey.flatMap(UUID.init(uuidString:))
-        case .dueDate, .startDate:
+        case .dueDate, .startDate, .tags, .repoIds, .branch, .estimate:
             break // not groupable — never reached in practice, see FieldDef.isGroupable
         case .custom(let field):
             updated.customFieldValues[field.id.uuidString] = groupKey.map(AnyCodableValue.string) ?? .null

@@ -2,7 +2,7 @@ name: Zenith
 options:
   bundleIdPrefix: com.zolboo
   deploymentTarget:
-    macOS: "14.0"
+    macOS: "14.4"
   createIntermediateGroups: true
 
 packages:
@@ -27,7 +27,7 @@ targets:
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "6.0"
-        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        MACOSX_DEPLOYMENT_TARGET: "14.4"
         # Ad-hoc signing only — no Apple Developer Program membership, no
         # notarization, personal-use single-Mac app (per the plan's
         # explicit decision). "-" is the ad-hoc identity: no certificate,

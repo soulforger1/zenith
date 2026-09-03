@@ -187,7 +187,7 @@ private struct SpaceDetailContainer<Content: View>: View {
 private func ViewContentView(model: SpaceDetailModel, view: ZView) -> some View {
     switch view.type {
     case .table:
-        IssueTableView(model: model)
+        IssueTableView(model: model, view: view)
     case .board:
         KanbanBoardView(model: model, view: view)
     case .roadmap:

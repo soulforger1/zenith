@@ -101,4 +101,83 @@ struct FieldRegistryTests {
         #expect(range?.start == "2026-01-01")
         #expect(range?.end == "2026-01-15")
     }
+
+    // MARK: - Table-only built-ins (tags/repoIds/branch/estimate), added
+    // during subtask 7's parity pass — `buildFieldRegistry` on the web
+    // side always included these 4 alongside status/priority/milestone/
+    // dueDate/startDate; the earlier Board/Roadmap-driven port had
+    // silently dropped them since neither of those views needed them.
+
+    @Test("build() includes tags/repoIds/branch/estimate alongside the original 5 built-ins")
+    func buildIncludesAllNineBuiltIns() {
+        let registry = FieldRegistry.build(customFields: [], milestones: [])
+        let ids = Set(registry.map(\.id))
+        #expect(ids == ["status", "priority", "milestoneId", "dueDate", "startDate", "tags", "repoIds", "branch", "estimate"])
+    }
+
+    @Test("none of tags/repoIds/branch/estimate are groupable or date-capable")
+    func newBuiltInsAreDisplayOnly() {
+        for field in [FieldDef.tags, .repoIds(options: []), .branch, .estimate] {
+            #expect(!field.isGroupable)
+            #expect(!field.isDateCapable)
+        }
+    }
+
+    @Test("displayValue is .empty for absent/empty values across every field kind")
+    func displayValueEmpty() {
+        let issue = makeIssue()
+        #expect(FieldDef.dueDate.displayValue(for: issue) == .empty)
+        #expect(FieldDef.tags.displayValue(for: issue) == .empty)
+        #expect(FieldDef.branch.displayValue(for: issue) == .empty)
+        #expect(FieldDef.estimate.displayValue(for: issue) == .empty)
+        #expect(FieldDef.repoIds(options: []).displayValue(for: issue) == .empty)
+    }
+
+    @Test("displayValue renders tags as rawTags (no fixed option list)")
+    func displayValueTags() {
+        var issue = makeIssue()
+        issue.tags = ["frontend", "bug"]
+        #expect(FieldDef.tags.displayValue(for: issue) == .rawTags(["frontend", "bug"]))
+    }
+
+    @Test("displayValue renders branch with the branch case, not plain text")
+    func displayValueBranch() {
+        var issue = makeIssue()
+        issue.branch = "feature/x"
+        #expect(FieldDef.branch.displayValue(for: issue) == .branch("feature/x"))
+    }
+
+    @Test("displayValue resolves repoIds against the field's own repo options")
+    func displayValueRepoIds() {
+        let repoId = UUID()
+        var issue = makeIssue()
+        issue.repoIds = [repoId]
+        let field = FieldDef.repoIds(options: [NormalizedOption(id: repoId.uuidString, label: "zenith", color: "gray")])
+        #expect(field.displayValue(for: issue) == .options([NormalizedOption(id: repoId.uuidString, label: "zenith", color: "gray")]))
+    }
+
+    @Test("displayValue formats a whole-number custom field without a trailing .0")
+    func displayValueWholeNumber() {
+        let now = Date()
+        let numberField = CustomField(
+            id: UUID(), spaceId: UUID(), key: "points", name: "Points", type: .number,
+            options: .fields([]), position: 0, createdAt: now, updatedAt: now
+        )
+        var issue = makeIssue()
+        issue.customFieldValues[numberField.id.uuidString] = .number(5)
+        #expect(FieldDef.custom(numberField).displayValue(for: issue) == .text("5"))
+    }
+
+    @Test("displayValue resolves a multi-select custom field's ids to their options")
+    func displayValueMultiSelect() {
+        let now = Date()
+        let opt = FieldOption(id: "opt-1", name: "Backend", color: "blue")
+        let multiField = CustomField(
+            id: UUID(), spaceId: UUID(), key: "areas", name: "Areas", type: .multiSelect,
+            options: .fields([opt]), position: 0, createdAt: now, updatedAt: now
+        )
+        var issue = makeIssue()
+        issue.customFieldValues[multiField.id.uuidString] = .array([.string("opt-1")])
+        #expect(FieldDef.custom(multiField).displayValue(for: issue) == .options([NormalizedOption(id: "opt-1", label: "Backend", color: "blue")]))
+    }
 }

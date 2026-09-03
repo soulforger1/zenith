@@ -1,20 +1,55 @@
 import SwiftUI
 import ZenithData
 
-/// First-cut port of `components/views/table-view.tsx`, using SwiftUI's
-/// native `Table` (per docs/native-rewrite-audit.md's decision 6). Covers
-/// the fixed built-in columns (title/status/priority/due date) with
-/// sorting and multi-select; the dynamic custom-field-registry columns,
-/// filter bar, and bulk-action toolbar are a follow-up slice — this
-/// establishes the real-data table and quick status/priority edits first.
+/// Port of `components/views/table-view.tsx`, using SwiftUI's native
+/// `Table` (per docs/native-rewrite-audit.md's decision 6). Columns are
+/// driven by the view's own `TableViewConfig.visibleFieldIds` (the same
+/// data the web build's `ViewSettingsPopover` would edit — there's no
+/// native equivalent of that popover yet, so `visibleFieldIds` is
+/// effectively read-only here, defaulting to `["status", "priority"]` same
+/// as `getOrCreateDefaultViewsForSpace`'s seed), not a fixed hardcoded
+/// column set — a real fix from the first-cut version of this view, which
+/// always showed Status/Priority/Due regardless of the view's actual
+/// config (Due, in particular, was showing even though it isn't in the
+/// default `visibleFieldIds` on either the web or native side).
+///
+/// Status/priority stay interactively editable in-cell (a native
+/// enhancement over the web build, which only ever shows a read-only
+/// `FieldBadge` there and requires opening the task detail drawer to
+/// change them) — every other visible field renders read-only via
+/// `FieldDisplayValueView`, matching the web build.
+///
+/// Deliberately deferred, not silently dropped (see
+/// docs/native-rewrite-audit.md / the plan's subtask 7 notes): the
+/// keyword/field filter bar, per-field sort/hide via a column menu, and
+/// the view-settings popover for editing `visibleFieldIds` itself —
+/// porting `lib/fields/filter.ts`'s `applyKeyword`/`applyFilters`/
+/// `applySort`/`groupIssuesBy` is real, non-trivial business logic in its
+/// own right, not table-view boilerplate, and personal-app scale doesn't
+/// need it as urgently as the CRUD/bulk-action parity this pass closes.
 struct IssueTableView: View {
     let model: SpaceDetailModel
+    let view: ZView
 
     @Environment(AppShellModel.self) private var shell
     @State private var records: [IssueRecord] = []
     @State private var sortOrder = [KeyPathComparator(\IssueRecord.title)]
     @State private var selection = Set<UUID>()
     @State private var newTaskTitle = ""
+    @State private var isBulkWorking = false
+
+    private var registry: [FieldDef] {
+        FieldRegistry.build(customFields: model.customFields, milestones: model.milestones, repos: model.repos)
+    }
+
+    private var tableConfig: TableViewConfig {
+        if case .table(let config) = view.config { return config }
+        return TableViewConfig(visibleFieldIds: ["status", "priority"], sort: [], groupByFieldId: nil, filters: [])
+    }
+
+    private var visibleFields: [FieldDef] {
+        tableConfig.visibleFieldIds.compactMap { FieldRegistry.fieldDef(in: registry, id: $0) }
+    }
 
     private var sortedRecords: [IssueRecord] {
         records.sorted(using: sortOrder)
@@ -24,24 +59,20 @@ struct IssueTableView: View {
         VStack(alignment: .leading, spacing: 0) {
             quickAddRow
 
+            if !selection.isEmpty {
+                bulkToolbar
+            }
+
             Table(sortedRecords, selection: $selection, sortOrder: $sortOrder) {
                 TableColumn("Title", value: \.title) { record in
                     Text(record.title).lineLimit(1)
                 }
-                TableColumn("Status", value: \.status.rawValue) { record in
-                    statusPicker(for: record)
+                TableColumnForEach(visibleFields, id: \.id) { field in
+                    TableColumn(field.name.uppercased()) { record in
+                        cell(for: field, record: record)
+                    }
+                    .width(min: 90, ideal: 120)
                 }
-                .width(140)
-                TableColumn("Priority", value: \.priority.rawValue) { record in
-                    priorityPicker(for: record)
-                }
-                .width(110)
-                TableColumn("Due", value: \.dueDateSortKey) { record in
-                    Text(record.dueDate ?? "—")
-                        .foregroundStyle(record.dueDate == nil ? .secondary : .primary)
-                        .monospaced()
-                }
-                .width(100)
             }
         }
         .task(id: model.issues.map(\.id)) {
@@ -52,9 +83,23 @@ struct IssueTableView: View {
         // opt out). `Table` doesn't expose a per-row click separate from
         // selection, so selecting a single row is the native equivalent —
         // matches how Mail/Notes open an item's detail pane on selection.
+        // Multi-selection (for the bulk toolbar) intentionally does *not*
+        // open the inspector — only a single freshly-made selection does.
         .onChange(of: selection) { _, newSelection in
             guard newSelection.count == 1, let id = newSelection.first else { return }
             shell.openTask(spaceId: model.space.id, issueId: id)
+        }
+    }
+
+    @ViewBuilder
+    private func cell(for field: FieldDef, record: IssueRecord) -> some View {
+        switch field {
+        case .status:
+            statusPicker(for: record)
+        case .priority:
+            priorityPicker(for: record)
+        default:
+            FieldDisplayValueView(value: field.displayValue(for: record))
         }
     }
 
@@ -72,6 +117,63 @@ struct IssueTableView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    private var bulkToolbar: some View {
+        HStack(spacing: 10) {
+            Text("\(selection.count) selected").font(.caption.weight(.medium))
+
+            Picker("Set status", selection: Binding<IssueStatus?>(get: { nil }, set: { status in
+                guard let status else { return }
+                Task { await runBulk { await model.bulkUpdateStatus(Array(selection), status: status) } }
+            })) {
+                Text("Set status").tag(IssueStatus?.none)
+                ForEach(IssueStatus.allCases, id: \.self) { status in
+                    Text(statusLabel(status)).tag(IssueStatus?.some(status))
+                }
+            }
+            .frame(width: 130)
+            .disabled(isBulkWorking)
+
+            Picker("Set priority", selection: Binding<IssuePriority?>(get: { nil }, set: { priority in
+                guard let priority else { return }
+                Task { await runBulk { await model.bulkUpdatePriority(Array(selection), priority: priority) } }
+            })) {
+                Text("Set priority").tag(IssuePriority?.none)
+                ForEach(IssuePriority.allCases, id: \.self) { priority in
+                    Text(PriorityLabel.label(for: priority)).tag(IssuePriority?.some(priority))
+                }
+            }
+            .frame(width: 130)
+            .disabled(isBulkWorking)
+
+            Button("Delete", role: .destructive) {
+                let ids = Array(selection)
+                selection.removeAll()
+                Task { await runBulk { await model.bulkDelete(ids) } }
+            }
+            .disabled(isBulkWorking)
+
+            Spacer()
+
+            if isBulkWorking {
+                ProgressView().controlSize(.small)
+            }
+            Button("Clear") { selection.removeAll() }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+        }
+        .font(.caption)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.quaternary.opacity(0.5))
+    }
+
+    private func runBulk(_ action: @escaping () async -> Void) async {
+        isBulkWorking = true
+        await action()
+        selection.removeAll()
+        isBulkWorking = false
     }
 
     private func statusPicker(for record: IssueRecord) -> some View {
@@ -108,11 +210,4 @@ struct IssueTableView: View {
         case .done: return "Done"
         }
     }
-}
-
-private extension IssueRecord {
-    /// `nil` due dates should sort last regardless of ascending/descending
-    /// — mapping to a far-future sentinel string keeps `Table`'s built-in
-    /// string comparator doing the sorting without a custom Comparable.
-    var dueDateSortKey: String { dueDate ?? "9999-99-99" }
 }

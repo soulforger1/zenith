@@ -29,6 +29,13 @@ public enum FieldDef: Sendable, Equatable {
     case milestone(options: [NormalizedOption])
     case dueDate
     case startDate
+    /// Built-in, free-text multi-value field — unlike `multiSelect` custom
+    /// fields, tags have no fixed option list at all (any string the user
+    /// typed), mirroring `FieldBadge`'s special-cased "no options" branch.
+    case tags
+    case repoIds(options: [NormalizedOption])
+    case branch
+    case estimate
     case custom(CustomField)
 
     public var id: String {
@@ -38,6 +45,10 @@ public enum FieldDef: Sendable, Equatable {
         case .milestone: return "milestoneId"
         case .dueDate: return "dueDate"
         case .startDate: return "startDate"
+        case .tags: return "tags"
+        case .repoIds: return "repoIds"
+        case .branch: return "branch"
+        case .estimate: return "estimate"
         case .custom(let field): return field.id.uuidString
         }
     }
@@ -49,6 +60,10 @@ public enum FieldDef: Sendable, Equatable {
         case .milestone: return "Milestone"
         case .dueDate: return "Due date"
         case .startDate: return "Start date"
+        case .tags: return "Tags"
+        case .repoIds: return "Repo"
+        case .branch: return "Branch"
+        case .estimate: return "Estimate"
         case .custom(let field): return field.name
         }
     }
@@ -66,18 +81,21 @@ public enum FieldDef: Sendable, Equatable {
         switch self {
         case .dueDate, .startDate: return true
         case .custom(let field): return field.type == .date || field.type == .iteration
-        case .status, .priority, .milestone: return false
+        case .status, .priority, .milestone, .tags, .repoIds, .branch, .estimate: return false
         }
     }
 
     /// True for fields the Board's group-by picker offers — single-value,
     /// discrete-option fields (see `kanban-board.tsx`'s comment on
-    /// `withGroupValue`).
+    /// `withGroupValue`). Tags/repos/branch/estimate are Table-only
+    /// display columns, same as on the web side (`buildFieldRegistry`
+    /// includes them for every view, but only Board's own UI ever offers
+    /// groupable fields to pick from).
     public var isGroupable: Bool {
         switch self {
         case .status, .priority, .milestone: return true
         case .custom(let field): return field.type == .singleSelect || field.type == .iteration
-        case .dueDate, .startDate: return false
+        case .dueDate, .startDate, .tags, .repoIds, .branch, .estimate: return false
         }
     }
 
@@ -89,7 +107,9 @@ public enum FieldDef: Sendable, Equatable {
             return IssuePriority.allCases.map { NormalizedOption(id: $0.rawValue, label: PriorityLabel.label(for: $0), color: nil) }
         case .milestone(let options):
             return options
-        case .dueDate, .startDate:
+        case .repoIds(let options):
+            return options
+        case .dueDate, .startDate, .tags, .branch, .estimate:
             return []
         case .custom(let field):
             switch field.type {
@@ -112,7 +132,7 @@ public enum FieldDef: Sendable, Equatable {
         case .status: return issue.status.rawValue
         case .priority: return issue.priority.rawValue
         case .milestone: return issue.milestoneId?.uuidString
-        case .dueDate, .startDate: return nil
+        case .dueDate, .startDate, .tags, .repoIds, .branch, .estimate: return nil
         case .custom(let field):
             guard case .string(let value) = issue.customFieldValues[field.id.uuidString] else { return nil }
             return value
@@ -129,7 +149,7 @@ public enum FieldDef: Sendable, Equatable {
             return IssueFieldPatch(priority: groupKey.flatMap(IssuePriority.init(rawValue:)) ?? .medium)
         case .milestone:
             return IssueFieldPatch(milestoneId: .some(groupKey.flatMap(UUID.init(uuidString:))))
-        case .dueDate, .startDate:
+        case .dueDate, .startDate, .tags, .repoIds, .branch, .estimate:
             return IssueFieldPatch()
         case .custom(let field):
             let value: AnyCodableValue = groupKey.map(AnyCodableValue.string) ?? .null
@@ -162,6 +182,61 @@ public enum FieldDef: Sendable, Equatable {
         return options.first { $0.id == optionId }
     }
 
+    /// Read-only rendering value for a table/board cell — port of
+    /// `FieldBadge`'s `field`/`value` switch, minus the actual view code
+    /// (that's `Theme`/the Table view's job); this just decides *which
+    /// shape* of value a field produces so the view doesn't need its own
+    /// copy of this type-dispatch logic.
+    public func displayValue(for issue: IssueRecord) -> FieldDisplayValue {
+        switch self {
+        case .status:
+            return .option(options.first { $0.id == issue.status.rawValue }!)
+        case .priority:
+            return .option(options.first { $0.id == issue.priority.rawValue }!)
+        case .milestone:
+            guard let id = issue.milestoneId?.uuidString, let opt = options.first(where: { $0.id == id }) else { return .empty }
+            return .option(opt)
+        case .dueDate:
+            guard let date = issue.dueDate else { return .empty }
+            return .date(date)
+        case .startDate:
+            guard let date = issue.startDate else { return .empty }
+            return .date(date)
+        case .tags:
+            return issue.tags.isEmpty ? .empty : .rawTags(issue.tags)
+        case .repoIds(let repoOptions):
+            let selected = issue.repoIds.compactMap { id in repoOptions.first { $0.id == id.uuidString } }
+            return selected.isEmpty ? .empty : .options(selected)
+        case .branch:
+            guard let branch = issue.branch, !branch.isEmpty else { return .empty }
+            return .branch(branch)
+        case .estimate:
+            guard let estimate = issue.estimate, !estimate.isEmpty else { return .empty }
+            return .text(estimate)
+        case .custom(let field):
+            let value = issue.customFieldValues[field.id.uuidString]
+            switch field.type {
+            case .text:
+                if case .string(let s) = value, !s.isEmpty { return .text(s) }
+                return .empty
+            case .number:
+                if case .number(let n) = value { return .text(FieldRegistry.formatNumber(n)) }
+                return .empty
+            case .date:
+                if case .string(let s) = value, !s.isEmpty { return .date(s) }
+                return .empty
+            case .singleSelect, .iteration:
+                guard case .string(let optionId) = value, let opt = options.first(where: { $0.id == optionId }) else { return .empty }
+                return .option(opt)
+            case .multiSelect:
+                guard case .array(let items) = value else { return .empty }
+                let ids = items.compactMap { item -> String? in if case .string(let s) = item { return s }; return nil }
+                let opts = ids.compactMap { id in options.first { $0.id == id } }
+                return opts.isEmpty ? .empty : .options(opts)
+            }
+        }
+    }
+
     private func statusLabel(_ status: IssueStatus) -> String {
         switch status {
         case .backlog: return "Backlog"
@@ -179,6 +254,22 @@ public enum FieldDef: Sendable, Equatable {
         case .done: return "green"
         }
     }
+}
+
+/// Which shape a field's value renders as — port of `FieldBadge`'s
+/// `isEmpty`/`field.type` dispatch, minus the actual view/styling code.
+public enum FieldDisplayValue: Sendable, Equatable {
+    case empty
+    case text(String)
+    /// `⎇ branch-name`, monospaced — `FieldBadge`'s one field-id-specific
+    /// special case (`field.id === "branch"`).
+    case branch(String)
+    /// Raw `YYYY-MM-DD`; the view formats it for display.
+    case date(String)
+    case option(NormalizedOption)
+    case options([NormalizedOption])
+    /// Multi-value with no fixed option list (built-in `tags` only).
+    case rawTags([String])
 }
 
 /// Port of `resolveRange` — resolves a `[start, end]` pair for an issue
@@ -207,14 +298,23 @@ public enum FieldRegistry {
     /// Consumers filter for what they need (`isGroupable` for Board,
     /// `isDateCapable` for Roadmap) rather than this function pre-filtering,
     /// mirroring the TS split of responsibility.
-    public static func build(customFields: [CustomField], milestones: [Milestone]) -> [FieldDef] {
+    public static func build(customFields: [CustomField], milestones: [Milestone], repos: [Repo] = []) -> [FieldDef] {
         var fields: [FieldDef] = [
             .status, .priority,
             .milestone(options: milestones.map { NormalizedOption(id: $0.id.uuidString, label: $0.title, color: "gray") }),
             .dueDate, .startDate,
+            .tags,
+            .repoIds(options: repos.map { NormalizedOption(id: $0.id.uuidString, label: $0.name, color: "gray") }),
+            .branch, .estimate,
         ]
         fields += customFields.map { .custom($0) }
         return fields
+    }
+
+    /// `999` instead of `999.0` — matches `String(value)` on a JS number,
+    /// which never shows a trailing `.0` for whole numbers.
+    fileprivate static func formatNumber(_ value: Double) -> String {
+        value.truncatingRemainder(dividingBy: 1) == 0 ? String(Int(value)) : String(value)
     }
 
     public static func fieldDef(in registry: [FieldDef], id: String) -> FieldDef? {
