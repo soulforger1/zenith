@@ -1,0 +1,570 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		02B1280AA73A9EFC489364BA /* ZenithAI in Frameworks */ = {isa = PBXBuildFile; productRef = 5EB28726BCD693DFB8F2262B /* ZenithAI */; };
+		049F5B55C39BB78C5986340B /* TaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6012A66919D1B7B24B79DBC2 /* TaskDetailView.swift */; };
+		051D124245DC07D058D8F689 /* SpacesDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92C9EC6351F5A52C52154778 /* SpacesDashboardView.swift */; };
+		0E18BF0BF85D3C50C81DB1DC /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7006011B696BA4F92E79F69B /* SettingsView.swift */; };
+		1AC0EE53B5B298F13A219033 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD99B32988B0E46D54A231ED /* FlowLayout.swift */; };
+		1E207781A1FC33BCD16A8B2B /* SpaceDetailModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CDA29474911FBD13F43533D /* SpaceDetailModel.swift */; };
+		25F7828F0D957325B2E6C717 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E88EFC1A037F7CCD7B10C58 /* ContentView.swift */; };
+		2B2D324258CE6E60A27FABA5 /* ZenithApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADC8024AA8B7FBC8CB96DCA7 /* ZenithApp.swift */; };
+		39036EDC4186E67F1599C616 /* ShellRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74CDED395483EE8A0F4979CF /* ShellRoute.swift */; };
+		54F123531864C424911B4382 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4262F6F8D5A4CB3087B2A2F7 /* AppEnvironment.swift */; };
+		5571C13D1A33AE75D4364B8B /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A612C362F66922553DE2B7C /* Theme.swift */; };
+		57D3911B7EDF6C45BD53D92C /* IssueTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C92BFF19119A4BA39FC09A0 /* IssueTableView.swift */; };
+		587AD28F0C8B45EC534C1425 /* ZenithData in Frameworks */ = {isa = PBXBuildFile; productRef = DA1BD481FF230EFBD6C5AE8E /* ZenithData */; };
+		5F40E4E3333CE47D33223395 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 47C03EEA0E3AE79EAE6F404B /* Assets.xcassets */; };
+		7A5DA40FF58F7156D15151C7 /* KanbanBoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DA18F289D5746033C8CD2F8 /* KanbanBoardView.swift */; };
+		8C6B3EA2588F82648289A30C /* CustomFieldFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502C4A1EDC21C52F9D0E6F2F /* CustomFieldFormSheet.swift */; };
+		8E56F34FD69E8B4CDB5D2F87 /* SpaceHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5372DF2B386F9A9F35A878D5 /* SpaceHeaderView.swift */; };
+		92B69F8DAC8734EC284DEE0B /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B951EA21A8EF356FC1050C0F /* SetupView.swift */; };
+		A593ADC87D538CCA6763DD8E /* RoadmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADE0A5FF849DE098C2700FB8 /* RoadmapView.swift */; };
+		AD8B5E31AC32C0DA3F1F0D3B /* MilestoneDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F19302B5AA8631A6D5C2000 /* MilestoneDetailView.swift */; };
+		B12F43D7E39DDC5764011879 /* SpacesListModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F538EA75E0560E65245ED4 /* SpacesListModel.swift */; };
+		B84E0B5CB8D0EC9F288E11F9 /* PasteTaskModal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A3428B2E8FC1F40FFA7240 /* PasteTaskModal.swift */; };
+		C8557C1D028C11C14292535C /* NewSpaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C8FDACBDB23183A61494452 /* NewSpaceView.swift */; };
+		CBD9AAA53B650C1D0508B4F6 /* MilestoneFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67EC9C269A4B079F03FCE328 /* MilestoneFormSheet.swift */; };
+		CBE02647BF66445ADEFB29C2 /* MilestonesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 523503F96314C10B640D9DD5 /* MilestonesListView.swift */; };
+		DB50C0445C4C82F24204E247 /* AppShellModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AA815F738F1D74F9A13BCB5 /* AppShellModel.swift */; };
+		DCA6A3166A299AD539AC4D2A /* AppSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AC8883D983F039A5F9AB8BF /* AppSidebar.swift */; };
+		EFFAC186047DF4ADBA427590 /* SidebarState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15319BF1562C5256693A66C3 /* SidebarState.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		15319BF1562C5256693A66C3 /* SidebarState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarState.swift; sourceTree = "<group>"; };
+		2AC8883D983F039A5F9AB8BF /* AppSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSidebar.swift; sourceTree = "<group>"; };
+		3C8FDACBDB23183A61494452 /* NewSpaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewSpaceView.swift; sourceTree = "<group>"; };
+		3CDA29474911FBD13F43533D /* SpaceDetailModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDetailModel.swift; sourceTree = "<group>"; };
+		4262F6F8D5A4CB3087B2A2F7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+		442D81CC67F7BEC92EA98E90 /* Zenith.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Zenith.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		47C03EEA0E3AE79EAE6F404B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4DA18F289D5746033C8CD2F8 /* KanbanBoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KanbanBoardView.swift; sourceTree = "<group>"; };
+		502C4A1EDC21C52F9D0E6F2F /* CustomFieldFormSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFieldFormSheet.swift; sourceTree = "<group>"; };
+		518F6CACC74D3B05280CAA53 /* ZenithAI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ZenithAI; path = Packages/ZenithAI; sourceTree = SOURCE_ROOT; };
+		523503F96314C10B640D9DD5 /* MilestonesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilestonesListView.swift; sourceTree = "<group>"; };
+		5372DF2B386F9A9F35A878D5 /* SpaceHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceHeaderView.swift; sourceTree = "<group>"; };
+		56F538EA75E0560E65245ED4 /* SpacesListModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesListModel.swift; sourceTree = "<group>"; };
+		5A612C362F66922553DE2B7C /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		6012A66919D1B7B24B79DBC2 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
+		67EC9C269A4B079F03FCE328 /* MilestoneFormSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilestoneFormSheet.swift; sourceTree = "<group>"; };
+		68A3428B2E8FC1F40FFA7240 /* PasteTaskModal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteTaskModal.swift; sourceTree = "<group>"; };
+		7006011B696BA4F92E79F69B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		74CDED395483EE8A0F4979CF /* ShellRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellRoute.swift; sourceTree = "<group>"; };
+		7C92BFF19119A4BA39FC09A0 /* IssueTableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IssueTableView.swift; sourceTree = "<group>"; };
+		7E88EFC1A037F7CCD7B10C58 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		8F19302B5AA8631A6D5C2000 /* MilestoneDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilestoneDetailView.swift; sourceTree = "<group>"; };
+		92C9EC6351F5A52C52154778 /* SpacesDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesDashboardView.swift; sourceTree = "<group>"; };
+		9439D9F18B4A24B7936C98A7 /* ZenithData */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ZenithData; path = Packages/ZenithData; sourceTree = SOURCE_ROOT; };
+		9AA815F738F1D74F9A13BCB5 /* AppShellModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellModel.swift; sourceTree = "<group>"; };
+		AD99B32988B0E46D54A231ED /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
+		ADC8024AA8B7FBC8CB96DCA7 /* ZenithApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZenithApp.swift; sourceTree = "<group>"; };
+		ADE0A5FF849DE098C2700FB8 /* RoadmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoadmapView.swift; sourceTree = "<group>"; };
+		B951EA21A8EF356FC1050C0F /* SetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		ACF62A7863250A3272C1DF4F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				587AD28F0C8B45EC534C1425 /* ZenithData in Frameworks */,
+				02B1280AA73A9EFC489364BA /* ZenithAI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0CA9B83ACBDA740FD20886FD = {
+			isa = PBXGroup;
+			children = (
+				F26A81E05E920BD19EE16246 /* Packages */,
+				7DF4FC43E6D929A5A5491738 /* Zenith */,
+				B09EF9F6E1B8554DB3619CAE /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		113913C8DA76703162CA033A /* Setup */ = {
+			isa = PBXGroup;
+			children = (
+				B951EA21A8EF356FC1050C0F /* SetupView.swift */,
+			);
+			path = Setup;
+			sourceTree = "<group>";
+		};
+		116EB854BC23AB417B3AB2C2 /* Shell */ = {
+			isa = PBXGroup;
+			children = (
+				2AC8883D983F039A5F9AB8BF /* AppSidebar.swift */,
+				74CDED395483EE8A0F4979CF /* ShellRoute.swift */,
+				5372DF2B386F9A9F35A878D5 /* SpaceHeaderView.swift */,
+			);
+			path = Shell;
+			sourceTree = "<group>";
+		};
+		30AA253936738549D4B95B25 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				C76357BA4926F7A6F8515C24 /* AI */,
+				8F18626AE7F3397C3BE23A60 /* Milestones */,
+				DEA482353CB4055FF3FB43BF /* Settings */,
+				116EB854BC23AB417B3AB2C2 /* Shell */,
+				CB6EC1897BCA09F77DE429D5 /* Spaces */,
+				D5CFAC1BCB6C6FB40BF7ADC3 /* Support */,
+				88335D9E8330C674D555F32F /* TaskDetail */,
+				A05C1907C79AAE5B8D4234D0 /* Views */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		79C163651E1DA1BED67E0048 /* AppState */ = {
+			isa = PBXGroup;
+			children = (
+				4262F6F8D5A4CB3087B2A2F7 /* AppEnvironment.swift */,
+				9AA815F738F1D74F9A13BCB5 /* AppShellModel.swift */,
+				15319BF1562C5256693A66C3 /* SidebarState.swift */,
+			);
+			path = AppState;
+			sourceTree = "<group>";
+		};
+		7DF4FC43E6D929A5A5491738 /* Zenith */ = {
+			isa = PBXGroup;
+			children = (
+				47C03EEA0E3AE79EAE6F404B /* Assets.xcassets */,
+				7E88EFC1A037F7CCD7B10C58 /* ContentView.swift */,
+				5A612C362F66922553DE2B7C /* Theme.swift */,
+				ADC8024AA8B7FBC8CB96DCA7 /* ZenithApp.swift */,
+				79C163651E1DA1BED67E0048 /* AppState */,
+				113913C8DA76703162CA033A /* Setup */,
+				30AA253936738549D4B95B25 /* UI */,
+				AA090A59F63D3EFB473ABE64 /* ViewModels */,
+			);
+			path = Zenith;
+			sourceTree = "<group>";
+		};
+		88335D9E8330C674D555F32F /* TaskDetail */ = {
+			isa = PBXGroup;
+			children = (
+				6012A66919D1B7B24B79DBC2 /* TaskDetailView.swift */,
+			);
+			path = TaskDetail;
+			sourceTree = "<group>";
+		};
+		8F18626AE7F3397C3BE23A60 /* Milestones */ = {
+			isa = PBXGroup;
+			children = (
+				8F19302B5AA8631A6D5C2000 /* MilestoneDetailView.swift */,
+				67EC9C269A4B079F03FCE328 /* MilestoneFormSheet.swift */,
+				523503F96314C10B640D9DD5 /* MilestonesListView.swift */,
+			);
+			path = Milestones;
+			sourceTree = "<group>";
+		};
+		A05C1907C79AAE5B8D4234D0 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				7C92BFF19119A4BA39FC09A0 /* IssueTableView.swift */,
+				4DA18F289D5746033C8CD2F8 /* KanbanBoardView.swift */,
+				ADE0A5FF849DE098C2700FB8 /* RoadmapView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		AA090A59F63D3EFB473ABE64 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				3CDA29474911FBD13F43533D /* SpaceDetailModel.swift */,
+				56F538EA75E0560E65245ED4 /* SpacesListModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		B09EF9F6E1B8554DB3619CAE /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				442D81CC67F7BEC92EA98E90 /* Zenith.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C76357BA4926F7A6F8515C24 /* AI */ = {
+			isa = PBXGroup;
+			children = (
+				68A3428B2E8FC1F40FFA7240 /* PasteTaskModal.swift */,
+			);
+			path = AI;
+			sourceTree = "<group>";
+		};
+		CB6EC1897BCA09F77DE429D5 /* Spaces */ = {
+			isa = PBXGroup;
+			children = (
+				3C8FDACBDB23183A61494452 /* NewSpaceView.swift */,
+				92C9EC6351F5A52C52154778 /* SpacesDashboardView.swift */,
+			);
+			path = Spaces;
+			sourceTree = "<group>";
+		};
+		D5CFAC1BCB6C6FB40BF7ADC3 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				AD99B32988B0E46D54A231ED /* FlowLayout.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		DEA482353CB4055FF3FB43BF /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				502C4A1EDC21C52F9D0E6F2F /* CustomFieldFormSheet.swift */,
+				7006011B696BA4F92E79F69B /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		F26A81E05E920BD19EE16246 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				518F6CACC74D3B05280CAA53 /* ZenithAI */,
+				9439D9F18B4A24B7936C98A7 /* ZenithData */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		95BDCC334A579D0EAC9FB039 /* Zenith */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DB97A5EB2B6CC34D80F847AA /* Build configuration list for PBXNativeTarget "Zenith" */;
+			buildPhases = (
+				7C6275036623F1EBCE9939E5 /* Sources */,
+				7838D1BEA581C6F8855E51A7 /* Resources */,
+				ACF62A7863250A3272C1DF4F /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Zenith;
+			packageProductDependencies = (
+				DA1BD481FF230EFBD6C5AE8E /* ZenithData */,
+				5EB28726BCD693DFB8F2262B /* ZenithAI */,
+			);
+			productName = Zenith;
+			productReference = 442D81CC67F7BEC92EA98E90 /* Zenith.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		315114D9A2FF386DD930019F /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					95BDCC334A579D0EAC9FB039 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 874B9B3E0BA319F4772B2B30 /* Build configuration list for PBXProject "Zenith" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 0CA9B83ACBDA740FD20886FD;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				6872207B53A9A0DBD817D0BD /* XCLocalSwiftPackageReference "Packages/ZenithAI" */,
+				25E5823CC8CEA4B37749A33E /* XCLocalSwiftPackageReference "Packages/ZenithData" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = B09EF9F6E1B8554DB3619CAE /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				95BDCC334A579D0EAC9FB039 /* Zenith */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7838D1BEA581C6F8855E51A7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5F40E4E3333CE47D33223395 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7C6275036623F1EBCE9939E5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				54F123531864C424911B4382 /* AppEnvironment.swift in Sources */,
+				DB50C0445C4C82F24204E247 /* AppShellModel.swift in Sources */,
+				DCA6A3166A299AD539AC4D2A /* AppSidebar.swift in Sources */,
+				25F7828F0D957325B2E6C717 /* ContentView.swift in Sources */,
+				8C6B3EA2588F82648289A30C /* CustomFieldFormSheet.swift in Sources */,
+				1AC0EE53B5B298F13A219033 /* FlowLayout.swift in Sources */,
+				57D3911B7EDF6C45BD53D92C /* IssueTableView.swift in Sources */,
+				7A5DA40FF58F7156D15151C7 /* KanbanBoardView.swift in Sources */,
+				AD8B5E31AC32C0DA3F1F0D3B /* MilestoneDetailView.swift in Sources */,
+				CBD9AAA53B650C1D0508B4F6 /* MilestoneFormSheet.swift in Sources */,
+				CBE02647BF66445ADEFB29C2 /* MilestonesListView.swift in Sources */,
+				C8557C1D028C11C14292535C /* NewSpaceView.swift in Sources */,
+				B84E0B5CB8D0EC9F288E11F9 /* PasteTaskModal.swift in Sources */,
+				A593ADC87D538CCA6763DD8E /* RoadmapView.swift in Sources */,
+				0E18BF0BF85D3C50C81DB1DC /* SettingsView.swift in Sources */,
+				92B69F8DAC8734EC284DEE0B /* SetupView.swift in Sources */,
+				39036EDC4186E67F1599C616 /* ShellRoute.swift in Sources */,
+				EFFAC186047DF4ADBA427590 /* SidebarState.swift in Sources */,
+				1E207781A1FC33BCD16A8B2B /* SpaceDetailModel.swift in Sources */,
+				8E56F34FD69E8B4CDB5D2F87 /* SpaceHeaderView.swift in Sources */,
+				051D124245DC07D058D8F689 /* SpacesDashboardView.swift in Sources */,
+				B12F43D7E39DDC5764011879 /* SpacesListModel.swift in Sources */,
+				049F5B55C39BB78C5986340B /* TaskDetailView.swift in Sources */,
+				5571C13D1A33AE75D4364B8B /* Theme.swift in Sources */,
+				2B2D324258CE6E60A27FABA5 /* ZenithApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1F63B1336B612F6CBE1F3523 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		34441AB62BAF460C3127497D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zolboo.zenith;
+				PRODUCT_NAME = Zenith;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		593A8BE15745CF2C96BED232 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zolboo.zenith;
+				PRODUCT_NAME = Zenith;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		F79DACB008164CEA331CC475 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		874B9B3E0BA319F4772B2B30 /* Build configuration list for PBXProject "Zenith" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F79DACB008164CEA331CC475 /* Debug */,
+				1F63B1336B612F6CBE1F3523 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DB97A5EB2B6CC34D80F847AA /* Build configuration list for PBXNativeTarget "Zenith" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				593A8BE15745CF2C96BED232 /* Debug */,
+				34441AB62BAF460C3127497D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		25E5823CC8CEA4B37749A33E /* XCLocalSwiftPackageReference "Packages/ZenithData" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/ZenithData;
+		};
+		6872207B53A9A0DBD817D0BD /* XCLocalSwiftPackageReference "Packages/ZenithAI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/ZenithAI;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		5EB28726BCD693DFB8F2262B /* ZenithAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ZenithAI;
+		};
+		DA1BD481FF230EFBD6C5AE8E /* ZenithData */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ZenithData;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 315114D9A2FF386DD930019F /* Project object */;
+}

@@ -1,0 +1,13 @@
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+
+# xcodebuild -derivedDataPath macos/build (used for local test builds)
+build/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+.DS_Store

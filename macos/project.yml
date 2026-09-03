@@ -1,0 +1,50 @@
+name: Zenith
+options:
+  bundleIdPrefix: com.zolboo
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+packages:
+  ZenithData:
+    path: Packages/ZenithData
+  ZenithAI:
+    path: Packages/ZenithAI
+
+targets:
+  Zenith:
+    type: application
+    platform: macOS
+    sources:
+      - path: Zenith
+    dependencies:
+      - package: ZenithData
+      - package: ZenithAI
+    settings:
+      base:
+        PRODUCT_NAME: Zenith
+        PRODUCT_BUNDLE_IDENTIFIER: com.zolboo.zenith
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "6.0"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        ENABLE_HARDENED_RUNTIME: NO
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_PREVIEWS: YES
+
+schemes:
+  Zenith:
+    build:
+      targets:
+        Zenith: all
+    run:
+      config: Debug
+    archive:
+      config: Release
