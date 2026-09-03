@@ -13,6 +13,7 @@
 		0E18BF0BF85D3C50C81DB1DC /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7006011B696BA4F92E79F69B /* SettingsView.swift */; };
 		1AC0EE53B5B298F13A219033 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD99B32988B0E46D54A231ED /* FlowLayout.swift */; };
 		1E207781A1FC33BCD16A8B2B /* SpaceDetailModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CDA29474911FBD13F43533D /* SpaceDetailModel.swift */; };
+		2329D5FA8EB56FE274CA9520 /* OptionDoubleTapMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EB7FD89986A8A99A369A974 /* OptionDoubleTapMonitor.swift */; };
 		25F7828F0D957325B2E6C717 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E88EFC1A037F7CCD7B10C58 /* ContentView.swift */; };
 		2B2D324258CE6E60A27FABA5 /* ZenithApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADC8024AA8B7FBC8CB96DCA7 /* ZenithApp.swift */; };
 		39036EDC4186E67F1599C616 /* ShellRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74CDED395483EE8A0F4979CF /* ShellRoute.swift */; };
@@ -55,6 +56,7 @@
 		6012A66919D1B7B24B79DBC2 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
 		67EC9C269A4B079F03FCE328 /* MilestoneFormSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilestoneFormSheet.swift; sourceTree = "<group>"; };
 		68A3428B2E8FC1F40FFA7240 /* PasteTaskModal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteTaskModal.swift; sourceTree = "<group>"; };
+		6EB7FD89986A8A99A369A974 /* OptionDoubleTapMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptionDoubleTapMonitor.swift; sourceTree = "<group>"; };
 		7006011B696BA4F92E79F69B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		74CDED395483EE8A0F4979CF /* ShellRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellRoute.swift; sourceTree = "<group>"; };
 		7C92BFF19119A4BA39FC09A0 /* IssueTableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IssueTableView.swift; sourceTree = "<group>"; };
@@ -129,6 +131,7 @@
 			children = (
 				4262F6F8D5A4CB3087B2A2F7 /* AppEnvironment.swift */,
 				9AA815F738F1D74F9A13BCB5 /* AppShellModel.swift */,
+				6EB7FD89986A8A99A369A974 /* OptionDoubleTapMonitor.swift */,
 				15319BF1562C5256693A66C3 /* SidebarState.swift */,
 			);
 			path = AppState;
@@ -272,7 +275,7 @@
 				TargetAttributes = {
 					95BDCC334A579D0EAC9FB039 = {
 						DevelopmentTeam = "";
-						ProvisioningStyle = Automatic;
+						ProvisioningStyle = Manual;
 					};
 				};
 			};
@@ -327,6 +330,7 @@
 				CBD9AAA53B650C1D0508B4F6 /* MilestoneFormSheet.swift in Sources */,
 				CBE02647BF66445ADEFB29C2 /* MilestonesListView.swift in Sources */,
 				C8557C1D028C11C14292535C /* NewSpaceView.swift in Sources */,
+				2329D5FA8EB56FE274CA9520 /* OptionDoubleTapMonitor.swift in Sources */,
 				B84E0B5CB8D0EC9F288E11F9 /* PasteTaskModal.swift in Sources */,
 				A593ADC87D538CCA6763DD8E /* RoadmapView.swift in Sources */,
 				0E18BF0BF85D3C50C81DB1DC /* SettingsView.swift in Sources */,
@@ -407,7 +411,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -435,7 +442,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";

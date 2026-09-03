@@ -28,7 +28,18 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "6.0"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
-        CODE_SIGN_STYLE: Automatic
+        # Ad-hoc signing only — no Apple Developer Program membership, no
+        # notarization, personal-use single-Mac app (per the plan's
+        # explicit decision). "-" is the ad-hoc identity: no certificate,
+        # no keychain identity, no team needed — just enough of a
+        # signature for Gatekeeper/the Sequoia+ code-signing requirement
+        # to let a locally-built app run. `CODE_SIGN_STYLE: Manual` (not
+        # Automatic) so this is reproducible headlessly via `xcodebuild`
+        # without Xcode's UI ever needing to resolve a team.
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_REQUIRED: YES
+        CODE_SIGNING_ALLOWED: YES
         DEVELOPMENT_TEAM: ""
         ENABLE_HARDENED_RUNTIME: NO
         GENERATE_INFOPLIST_FILE: YES

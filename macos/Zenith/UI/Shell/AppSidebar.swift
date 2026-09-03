@@ -31,7 +31,16 @@ struct AppSidebar: View {
                 } label: {
                     Label("Paste task", systemImage: "sparkles")
                 }
-                .keyboardShortcut("c", modifiers: [])
+                // No bare-key shortcut here (the web build's un-modified
+                // "c" convention doesn't translate safely — SwiftUI's
+                // `.keyboardShortcut` has no equivalent of the web
+                // listener's explicit "not currently typing" guard, so a
+                // modifier-less letter shortcut would swallow that letter
+                // out of every text field in the app). The real global
+                // "open from anywhere" gesture is double-tap-Option
+                // (`OptionDoubleTapMonitor`, ported from the Electron
+                // build's own uiohook-based hotkey); ⌘⇧V covers it from the
+                // menu bar for while the app is focused.
             }
 
             Section("Spaces") {

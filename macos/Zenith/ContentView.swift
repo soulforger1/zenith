@@ -9,7 +9,10 @@ import ZenithData
 /// over it, standard toolbar) with no custom window hacks needed.
 struct ContentView: View {
     @Environment(AppEnvironment.self) private var environment
-    @State private var shell = AppShellModel()
+    // Owned by `ZenithApp` (not here) so the global double-tap-Option
+    // hotkey monitor, which lives outside the view hierarchy entirely, can
+    // share the same instance.
+    @Environment(AppShellModel.self) private var shell
     @State private var spacesModel: SpacesListModel?
     @State private var spaceDetailModels: [UUID: SpaceDetailModel] = [:]
 
@@ -82,7 +85,6 @@ struct ContentView: View {
                 SetupView()
             }
         }
-        .environment(shell)
         .task(id: environment.database == nil) {
             if let database = environment.database, spacesModel == nil {
                 spacesModel = SpacesListModel(database: database)
