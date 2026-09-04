@@ -65,7 +65,7 @@ struct ContentView: View {
                         ProgressView()
                     }
                 }
-                .sheet(isPresented: Binding(get: { shell.isAiModalPresented }, set: { shell.isAiModalPresented = $0 })) {
+                .modalOverlay(isPresented: Binding(get: { shell.isAiModalPresented }, set: { shell.isAiModalPresented = $0 })) {
                     // Targets whichever space is currently open, falling
                     // back to the first space in the sidebar — mirrors the
                     // web modal's `spaces.find(activeSlug) ?? spaces[0]`.
@@ -77,6 +77,16 @@ struct ContentView: View {
                         ContentUnavailableView("Create a space first", systemImage: "sparkles")
                             .frame(width: 360, height: 200)
                     }
+                }
+                .modalOverlay(
+                    isPresented: Binding(get: { shell.isCommandPalettePresented }, set: { shell.isCommandPalettePresented = $0 }),
+                    alignment: .top
+                ) {
+                    CommandPaletteView(
+                        summaries: spacesModel.summaries,
+                        activeSpace: shell.route.space,
+                        onDismiss: { shell.isCommandPalettePresented = false }
+                    )
                 }
             } else if environment.isConfigured {
                 ProgressView()
@@ -164,8 +174,11 @@ private struct SpaceLandingView: View {
 /// Wraps every per-space screen with the shared header/tab bar (port of
 /// `app/(app)/spaces/[spaceSlug]/layout.tsx` + `SpaceHeader`).
 private struct SpaceDetailContainer<Content: View>: View {
+    @Environment(AppShellModel.self) private var shell
     let model: SpaceDetailModel
     @ViewBuilder let content: Content
+
+    @State private var isCreatingView = false
 
     var body: some View {
         Group {
@@ -177,7 +190,15 @@ private struct SpaceDetailContainer<Content: View>: View {
         }
         .navigationTitle(model.space.name)
         .toolbar {
-            SpaceHeaderView(model: model)
+            SpaceHeaderView(model: model, onNewView: { isCreatingView = true })
+        }
+        .modalOverlay(isPresented: $isCreatingView) {
+            NewViewSheet(model: model) { newView in
+                isCreatingView = false
+                if let newView {
+                    shell.route = .spaceView(model.space, newView)
+                }
+            }
         }
         .task { if model.views.isEmpty { await model.load() } }
     }

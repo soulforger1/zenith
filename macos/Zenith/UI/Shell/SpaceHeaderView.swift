@@ -5,12 +5,15 @@ import ZenithData
 /// instead of a custom underlined tab bar — a segmented `Picker` is the
 /// standard macOS way to switch between a small set of views (mirrors
 /// Xcode's own editor/inspector switchers), and it comes with the
-/// translucent toolbar material for free. View create/rename/duplicate/
-/// delete (the `ViewTabMenu`/`NewViewButton` machinery) is a follow-up
-/// slice; this establishes native navigation between what already exists.
+/// translucent toolbar material for free. The toolbar "+" ports
+/// `space-tabs.tsx`'s `NewViewButton`; view rename/duplicate/delete (the
+/// `ViewTabMenu` machinery) is still a follow-up slice.
 struct SpaceHeaderView: ToolbarContent {
     @Environment(AppShellModel.self) private var shell
     let model: SpaceDetailModel
+    /// Opens the "New view" modal — owned by the enclosing `SpaceDetailContainer`
+    /// since `ToolbarContent` can't host a presentation modifier itself.
+    let onNewView: () -> Void
 
     private enum Tag: Hashable {
         case view(UUID)
@@ -56,6 +59,12 @@ struct SpaceHeaderView: ToolbarContent {
             }
             .pickerStyle(.segmented)
             .frame(minWidth: 320)
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Button(action: onNewView) {
+                Image(systemName: "plus")
+            }
+            .help("New view")
         }
         ToolbarItem(placement: .primaryAction) {
             Button {

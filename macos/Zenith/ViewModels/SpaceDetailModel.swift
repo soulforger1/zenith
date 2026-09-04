@@ -114,18 +114,37 @@ final class SpaceDetailModel {
     /// that need to set more than one field at once — mirrors
     /// `updateIssueGroupAction`. Keeps `issues` in sync locally the same
     /// way the single-field update methods above do.
-    func applyPatch(_ issueId: UUID, patch: IssueFieldPatch) async {
+    /// Returns `true` once the write is persisted — callers that update the
+    /// UI optimistically (the Board's drag-drop) use this to know whether to
+    /// roll back.
+    @discardableResult
+    func applyPatch(_ issueId: UUID, patch: IssueFieldPatch) async -> Bool {
         do {
             guard
                 let updated = try await IssueActions.updateIssueFields(
                     database, id: issueId, patch: patch)
-            else { return }
+            else { return false }
             if let index = issues.firstIndex(where: { $0.id == issueId }) {
                 issues[index] = updated
             }
+            return true
         } catch {
             loadError = error.diagnosticDescription
+            return false
         }
+    }
+
+    // MARK: - Views
+
+    /// Backs the tab bar's "+" new-view control. Appends the created view
+    /// locally (keeping `views` position-sorted) and hands it back so the
+    /// caller can navigate straight to it — mirrors `createViewAction` on
+    /// the web side.
+    func createView(name: String, type: ViewType) async throws -> ZView {
+        let view = try await ViewActions.createView(database, spaceId: space.id, name: name, type: type)
+        views.append(view)
+        views.sort { $0.position < $1.position }
+        return view
     }
 
     func createQuickIssue(title: String, status: IssueStatus) async {

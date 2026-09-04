@@ -49,10 +49,10 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .navigationTitle("Settings")
         .task(id: model.space.id) { context = model.space.context ?? "" }
-        .sheet(item: $editingField) { field in
+        .modalOverlay(item: $editingField) { field in
             CustomFieldFormSheet(model: model, mode: .edit(field)) { editingField = nil }
         }
-        .sheet(isPresented: $isCreatingField) {
+        .modalOverlay(isPresented: $isCreatingField) {
             CustomFieldFormSheet(model: model, mode: .create) { isCreatingField = false }
         }
     }

@@ -39,7 +39,7 @@ struct MilestonesListView: View {
                 }
             }
         }
-        .sheet(isPresented: $isCreating) {
+        .modalOverlay(isPresented: $isCreating) {
             MilestoneFormSheet(model: model, mode: .create(spaceId: model.space.id), onDismiss: { isCreating = false })
         }
     }
@@ -99,7 +99,7 @@ private struct MilestoneRow: View {
                 Task { await model.deleteMilestone(milestone.id) }
             } label: { Label("Delete", systemImage: "trash") }
         }
-        .sheet(isPresented: $isEditing) {
+        .modalOverlay(isPresented: $isEditing) {
             MilestoneFormSheet(model: model, mode: .edit(milestone), onDismiss: { isEditing = false })
         }
     }

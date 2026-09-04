@@ -85,7 +85,7 @@ struct MilestoneDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $isEditing) {
+        .modalOverlay(isPresented: $isEditing) {
             MilestoneFormSheet(
                 model: model, mode: .edit(currentMilestone), onDismiss: { isEditing = false })
         }

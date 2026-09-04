@@ -19,6 +19,7 @@ struct ZenithApp: App {
     // same instance the views react to via `.environment(shell)` below.
     @State private var shell = AppShellModel()
     @State private var hotkeyMonitor: OptionDoubleTapMonitor?
+    @State private var shortcutMonitor: InAppShortcutMonitor?
 
     var body: some Scene {
         WindowGroup {
@@ -30,6 +31,10 @@ struct ZenithApp: App {
                     let monitor = OptionDoubleTapMonitor(shell: shell)
                     monitor.start()
                     hotkeyMonitor = monitor
+
+                    let shortcuts = InAppShortcutMonitor(shell: shell)
+                    shortcuts.start()
+                    shortcutMonitor = shortcuts
                 }
         }
         .defaultSize(width: 1200, height: 800)
@@ -41,10 +46,18 @@ struct ZenithApp: App {
                 }
                 .keyboardShortcut("n", modifiers: .command)
 
+                // No accelerator: paste-task's shortcut is a bare `c`
+                // (see `InAppShortcutMonitor`), which can't be a menu key
+                // equivalent without swallowing the letter everywhere.
                 Button("Paste Task…") {
                     shell.openAiModal()
                 }
-                .keyboardShortcut("v", modifiers: [.command, .shift])
+            }
+            CommandGroup(after: .toolbar) {
+                Button("Search & Commands…") {
+                    shell.openCommandPalette()
+                }
+                .keyboardShortcut("k", modifiers: .command)
             }
         }
     }
