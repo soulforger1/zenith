@@ -44,7 +44,7 @@ public enum MilestoneQueries {
     ) async throws -> Milestone {
         let rows = try await db.query("""
             INSERT INTO milestones (space_id, title, description, due_date)
-            VALUES (\(spaceId), \(title), \(description), \(dueDate))
+            VALUES (\(spaceId), \(title), \(description), \(dueDate)::date)
             RETURNING \(unescaped: columns)
             """)
         for try await row in rows { return try map(row) }
@@ -58,7 +58,7 @@ public enum MilestoneQueries {
         _ db: ZenithDatabase, id: UUID, title: String, description: String?, dueDate: String?
     ) async throws -> Milestone? {
         let rows = try await db.query("""
-            UPDATE milestones SET title = \(title), description = \(description), due_date = \(dueDate), updated_at = now()
+            UPDATE milestones SET title = \(title), description = \(description), due_date = \(dueDate)::date, updated_at = now()
             WHERE id = \(id) RETURNING \(unescaped: columns)
             """)
         for try await row in rows { return try map(row) }

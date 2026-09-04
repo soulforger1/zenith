@@ -249,12 +249,11 @@ public enum IssueQueries {
         let cutoffString = formatter.string(from: cutoffDate)
 
         // `due_date` is a Postgres `date` column; PostgresNIO binds a
-        // Swift `String` parameter as `text`, and Postgres has no implicit
-        // `date <= text` operator (unlike assignment contexts — e.g.
-        // `UPDATE ... SET due_date = $1` — where a text->date coercion
-        // *is* implicit). The explicit `::date` cast is required here.
-        // `i.due_date::text` here too — see the `columns` comment above on
-        // why casting a `date` column is required, not cosmetic.
+        // Swift `String` parameter as `text`, and Postgres won't coerce a
+        // `text`-typed parameter to `date` in any context — comparison
+        // (`date <= text`) or assignment (`SET due_date = $1`) alike. Every
+        // `due_date` read casts the column with `::text`, every write casts
+        // the parameter with `::date`.
         let rows = try await db.query("""
             SELECT i.id, i.title, i.priority, i.status, i.due_date::text AS due_date, s.name AS space_name, s.slug AS space_slug
             FROM issues i INNER JOIN spaces s ON i.space_id = s.id
@@ -334,7 +333,7 @@ public enum IssueQueries {
             ) VALUES (
                 \(input.spaceId), \(input.title), \(input.description), \(input.status.rawValue), \(isClosed),
                 \(closedAt), \(input.priority.rawValue), \(input.tags), \(input.branch), \(input.estimate),
-                \(input.parentId), \(input.milestoneId), \(input.dueDate), \(input.startDate),
+                \(input.parentId), \(input.milestoneId), \(input.dueDate)::date, \(input.startDate)::date,
                 \(input.customFieldValues), \(position)
             ) RETURNING \(unescaped: columns)
             """)
@@ -369,7 +368,7 @@ public enum IssueQueries {
                 ) VALUES (
                     \(spaceId), \(draft.title), \(draft.description), 'backlog', false, \(draft.priority.rawValue),
                     \(draft.tags), \(draft.branch), \(draft.estimate), \(draft.parentId), \(draft.milestoneId),
-                    \(draft.dueDate), \(draft.customFieldValues), \(position!)
+                    \(draft.dueDate)::date, \(draft.customFieldValues), \(position!)
                 ) RETURNING \(unescaped: columns)
                 """)
             for try await row in insertRows {
@@ -422,11 +421,18 @@ public enum IssueQueries {
             if case .some(let milestoneId) = patch.milestoneId {
                 if let milestoneId { try update.set("milestone_id", milestoneId) } else { update.setNull("milestone_id") }
             }
+            // `due_date`/`start_date` are Postgres `date` columns and
+            // PostgresNIO binds a Swift `String` parameter as `text`.
+            // Postgres will not coerce a `text`-typed parameter to `date`
+            // even in an assignment context (only a truly *unknown* literal
+            // gets that treatment), so the `::date` cast is required — its
+            // absence is what raised `42804: column "due_date" is of type
+            // date but expression is of type text`.
             if case .some(let dueDate) = patch.dueDate {
-                if let dueDate { try update.set("due_date", dueDate) } else { update.setNull("due_date") }
+                if let dueDate { try update.set("due_date", raw: "$1::date", binding: dueDate) } else { update.setNull("due_date") }
             }
             if case .some(let startDate) = patch.startDate {
-                if let startDate { try update.set("start_date", startDate) } else { update.setNull("start_date") }
+                if let startDate { try update.set("start_date", raw: "$1::date", binding: startDate) } else { update.setNull("start_date") }
             }
             if let position = patch.position { try update.set("position", position) }
             if let customFieldValues = patch.customFieldValues {
