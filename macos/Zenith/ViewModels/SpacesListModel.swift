@@ -22,9 +22,11 @@ final class SpacesListModel {
     private(set) var loadError: String?
 
     private let database: ZenithDatabase
+    private let toasts: ToastCenter
 
-    init(database: ZenithDatabase) {
+    init(database: ZenithDatabase, toasts: ToastCenter) {
         self.database = database
+        self.toasts = toasts
     }
 
     func load() async {
@@ -50,6 +52,7 @@ final class SpacesListModel {
     func createSpace(name: String, description: String?) async throws -> Space {
         let space = try await SpaceActions.createSpace(database, .init(name: name, description: description))
         await load()
+        toasts.success("Space created")
         return space
     }
 }

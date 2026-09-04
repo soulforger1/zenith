@@ -12,6 +12,7 @@ struct TaskDetailView: View {
     let issueId: UUID
 
     @Environment(AppShellModel.self) private var shell
+    @Environment(ToastCenter.self) private var toasts
 
     @State private var record: IssueRecord?
     @State private var title = ""
@@ -69,6 +70,7 @@ struct TaskDetailView: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
+                    .help("Unlink from parent task")
                 }
                 .font(.caption)
             }
@@ -119,8 +121,10 @@ struct TaskDetailView: View {
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     fieldLabel("Due")
-                    TextField("YYYY-MM-DD", text: $dueDate)
-                        .onSubmit { Task { await save(IssueFieldPatch(dueDate: .some(dueDate.isEmpty ? nil : dueDate))) } }
+                    OptionalDateField(value: dueDate) { newValue in
+                        dueDate = newValue ?? ""
+                        Task { await save(IssueFieldPatch(dueDate: .some(newValue))) }
+                    }
                 }
             }
 
@@ -201,6 +205,7 @@ struct TaskDetailView: View {
             .buttonStyle(.plain)
             .font(.caption)
             .foregroundStyle(.secondary)
+            .help("Copy an AI prompt for this task to the clipboard")
             Button {
                 shell.closeTask()
             } label: {
@@ -208,6 +213,7 @@ struct TaskDetailView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
+            .help("Close")
         }
     }
 
@@ -241,6 +247,7 @@ struct TaskDetailView: View {
                                     .foregroundStyle(isDone ? Color.accentColor : Color.secondary)
                             }
                             .buttonStyle(.plain)
+                            .help(isDone ? "Mark as not done" : "Mark as done")
                             Button {
                                 shell.openTask(spaceId: model.space.id, issueId: child.id)
                             } label: {
@@ -250,6 +257,7 @@ struct TaskDetailView: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .buttonStyle(.plain)
+                            .help("Open subtask")
                             Button {
                                 Task { await unlinkChild(child) }
                             } label: {
@@ -257,6 +265,7 @@ struct TaskDetailView: View {
                             }
                             .buttonStyle(.plain)
                             .foregroundStyle(.secondary)
+                            .help("Unlink subtask")
                         }
                         .font(.callout)
                     }
@@ -304,9 +313,15 @@ struct TaskDetailView: View {
         VStack(alignment: .leading, spacing: 4) {
             fieldLabel(field.name)
             switch field.type {
-            case .text, .number, .date:
+            case .text, .number:
                 TextField(field.name, text: stringBinding(key: key, isNumber: field.type == .number))
                     .onSubmit { Task { await save(IssueFieldPatch(customFieldValues: [key: customValues[key] ?? .null])) } }
+            case .date:
+                OptionalDateField(value: dateString(key: key)) { newValue in
+                    if let newValue { customValues[key] = .string(newValue) }
+                    else { customValues.removeValue(forKey: key) }
+                    Task { await save(IssueFieldPatch(customFieldValues: [key: customValues[key] ?? .null])) }
+                }
             case .singleSelect:
                 Picker("", selection: selectBinding(key: key)) {
                     Text("None").tag("")
@@ -341,6 +356,11 @@ struct TaskDetailView: View {
                 .onChange(of: customValues[key]) { _, _ in Task { await save(IssueFieldPatch(customFieldValues: [key: customValues[key] ?? .null])) } }
             }
         }
+    }
+
+    private func dateString(key: String) -> String {
+        if case .string(let value) = customValues[key] { return value }
+        return ""
     }
 
     private func stringBinding(key: String, isNumber: Bool) -> Binding<String> {
@@ -498,9 +518,13 @@ struct TaskDetailView: View {
 
     private func generateSubtasks() async {
         isGeneratingSubtasks = true
-        if let titles = try? await model.generateSubtasks(title: title, description: description.isEmpty ? nil : description) {
+        do {
+            let titles = try await model.generateSubtasks(
+                title: title, description: description.isEmpty ? nil : description)
             let created = await model.createSubtasksFromTitles(parentId: issueId, titles: titles)
             children = (children ?? []) + created
+        } catch {
+            toasts.error(error.diagnosticDescription)
         }
         isGeneratingSubtasks = false
     }
@@ -519,5 +543,44 @@ struct TaskDetailView: View {
             TaskPromptInput(title: title, description: description.isEmpty ? nil : description, subtasks: subtasks))
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(prompt, forType: .string)
+    }
+}
+
+/// A `DatePicker` for an optional `YYYY-MM-DD` value — the task
+/// inspector's date fields (built-in "Due" plus `date`-type custom
+/// fields) used to be free-text `YYYY-MM-DD` boxes. Shows a "Set date"
+/// affordance while unset, then the picker plus a clear button once a
+/// date is chosen. `onChange(nil)` clears the value.
+private struct OptionalDateField: View {
+    /// Current value as `YYYY-MM-DD`, or "" when unset.
+    let value: String
+    let onChange: (String?) -> Void
+
+    var body: some View {
+        if value.isEmpty {
+            Button("Set date") { onChange(ISODate.today()) }
+                .buttonStyle(.link)
+                .font(.callout)
+        } else {
+            HStack(spacing: 6) {
+                DatePicker(
+                    "",
+                    selection: Binding(
+                        get: { ISODate.parse(value) },
+                        set: { onChange(ISODate.string(from: $0)) }
+                    ),
+                    displayedComponents: .date
+                )
+                .labelsHidden()
+                .datePickerStyle(.compact)
+
+                Button { onChange(nil) } label: {
+                    Image(systemName: "xmark.circle.fill")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("Clear date")
+            }
+        }
     }
 }

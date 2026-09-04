@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// App entry point. Single window, no multi-window/document model needed —
@@ -18,6 +19,9 @@ struct ZenithApp: App {
     // which lives entirely outside the view hierarchy — can be handed the
     // same instance the views react to via `.environment(shell)` below.
     @State private var shell = AppShellModel()
+    // App-wide transient feedback, injected alongside `shell` so the view
+    // models (which own every CRUD path) can post success/error toasts.
+    @State private var toasts = ToastCenter()
     @State private var hotkeyMonitor: OptionDoubleTapMonitor?
     @State private var shortcutMonitor: InAppShortcutMonitor?
 
@@ -26,6 +30,7 @@ struct ZenithApp: App {
             ContentView()
                 .environment(environment)
                 .environment(shell)
+                .environment(toasts)
                 .task {
                     guard hotkeyMonitor == nil else { return }
                     let monitor = OptionDoubleTapMonitor(shell: shell)
@@ -35,6 +40,14 @@ struct ZenithApp: App {
                     let shortcuts = InAppShortcutMonitor(shell: shell)
                     shortcuts.start()
                     shortcutMonitor = shortcuts
+                }
+                // If the user grants Accessibility in System Settings and
+                // switches back, pick it up without a relaunch. `start()`
+                // is a no-op when already running or still not permitted.
+                .onReceive(
+                    NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
+                ) { _ in
+                    hotkeyMonitor?.start()
                 }
         }
         .defaultSize(width: 1200, height: 800)
@@ -51,6 +64,14 @@ struct ZenithApp: App {
                 // equivalent without swallowing the letter everywhere.
                 Button("Paste Task…") {
                     shell.openAiModal()
+                }
+
+                // The system-wide ⌥⌥ quick-capture gesture needs
+                // Accessibility permission, which the app never prompts
+                // for automatically (see `OptionDoubleTapMonitor.start`).
+                // This is the explicit opt-in.
+                Button("Enable ⌥⌥ Quick Capture…") {
+                    hotkeyMonitor?.requestPermissionAndOpenSettings()
                 }
             }
             CommandGroup(after: .toolbar) {

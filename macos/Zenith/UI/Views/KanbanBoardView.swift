@@ -44,10 +44,14 @@ struct KanbanBoardView: View {
         return field
     }
 
+    private var filteredRecords: [IssueRecord] {
+        FilterEvaluation.apply(records, filters: view.config.filters, registry: registry)
+    }
+
     private var columns: [(key: String?, title: String, issues: [IssueRecord])] {
         let field = groupField
         var buckets: [String?: [IssueRecord]] = [:]
-        for record in records {
+        for record in filteredRecords {
             let key = field.groupKey(for: record)
             buckets[key, default: []].append(record)
         }

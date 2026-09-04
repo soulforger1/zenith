@@ -37,6 +37,7 @@ struct MilestonesListView: View {
                 } label: {
                     Label("New Milestone", systemImage: "plus")
                 }
+                .help("New milestone")
             }
         }
         .modalOverlay(isPresented: $isCreating) {

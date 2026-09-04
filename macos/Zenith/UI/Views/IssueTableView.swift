@@ -19,14 +19,13 @@ import ZenithData
 /// change them) — every other visible field renders read-only via
 /// `FieldDisplayValueView`, matching the web build.
 ///
-/// Deliberately deferred, not silently dropped (see
-/// docs/native-rewrite-audit.md / the plan's subtask 7 notes): the
-/// keyword/field filter bar, per-field sort/hide via a column menu, and
-/// the view-settings popover for editing `visibleFieldIds` itself —
-/// porting `lib/fields/filter.ts`'s `applyKeyword`/`applyFilters`/
-/// `applySort`/`groupIssuesBy` is real, non-trivial business logic in its
-/// own right, not table-view boilerplate, and personal-app scale doesn't
-/// need it as urgently as the CRUD/bulk-action parity this pass closes.
+/// Filtering is applied here via `FilterEvaluation.apply` over the view's
+/// `config.filters` — the same list the shared `ViewFilterBar` (shown
+/// above every view) edits, and the same evaluation the Board and Roadmap
+/// run, so a filter behaves identically across all three. Still deferred
+/// (see docs/native-rewrite-audit.md): keyword search, per-field
+/// sort/hide via a column menu, and the view-settings popover for editing
+/// `visibleFieldIds`.
 struct IssueTableView: View {
     let model: SpaceDetailModel
     let view: ZView
@@ -52,7 +51,8 @@ struct IssueTableView: View {
     }
 
     private var sortedRecords: [IssueRecord] {
-        records.sorted(using: sortOrder)
+        FilterEvaluation.apply(records, filters: tableConfig.filters, registry: registry)
+            .sorted(using: sortOrder)
     }
 
     var body: some View {

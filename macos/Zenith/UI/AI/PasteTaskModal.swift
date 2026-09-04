@@ -83,6 +83,7 @@ struct PasteTaskModal: View {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .help("Close")
             }
             if inputPhase {
                 Picker("Mode", selection: $mode) {
@@ -121,8 +122,15 @@ struct PasteTaskModal: View {
                     .padding(6)
                     .background(.background, in: RoundedRectangle(cornerRadius: 8))
                     .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.separator))
+                    // ⌘V with an image on the clipboard attaches it as the
+                    // screenshot; ⌘V with text pastes normally (this only
+                    // intercepts image flavors). Replaces the old explicit
+                    // "Paste screenshot" button.
+                    .onPasteCommand(of: [.image]) { providers in
+                        attachPastedImage(from: providers)
+                    }
                 if text.isEmpty {
-                    Text("Paste a task description, ticket text, or a screenshot…")
+                    Text("Paste a task description, ticket text, or a screenshot (⌘V)…")
                         .foregroundStyle(.tertiary)
                         .padding(12)
                         .allowsHitTesting(false)
@@ -134,11 +142,6 @@ struct PasteTaskModal: View {
                     isImportingImage = true
                 } label: {
                     Label("Attach file…", systemImage: "paperclip")
-                }
-                Button {
-                    pasteImageFromClipboard()
-                } label: {
-                    Label("Paste screenshot", systemImage: "photo.on.rectangle")
                 }
                 if let attachedImageData, let nsImage = NSImage(data: attachedImageData) {
                     HStack(spacing: 4) {
@@ -153,6 +156,7 @@ struct PasteTaskModal: View {
                             Image(systemName: "xmark.circle.fill")
                         }
                         .buttonStyle(.plain)
+                        .help("Remove attached image")
                     }
                 }
             }
@@ -371,6 +375,7 @@ struct PasteTaskModal: View {
                 Image(systemName: "trash")
             }
             .buttonStyle(.borderless)
+            .help("Remove task")
         }
         .padding(8)
         .background(.background, in: RoundedRectangle(cornerRadius: 8))
@@ -554,17 +559,23 @@ struct PasteTaskModal: View {
         }
     }
 
-    private func pasteImageFromClipboard() {
-        let pasteboard = NSPasteboard.general
-        if let data = pasteboard.data(forType: .png) {
-            attachedImageData = data
-            attachedImageMimeType = "image/png"
-        } else if let tiffData = pasteboard.data(forType: .tiff),
-            let bitmap = NSBitmapImageRep(data: tiffData),
-            let pngData = bitmap.representation(using: .png, properties: [:])
-        {
-            attachedImageData = pngData
-            attachedImageMimeType = "image/png"
+    /// Handles an image pasted into the text field (`.onPasteCommand`).
+    /// Normalizes whatever flavor the pasteboard carried (PNG, TIFF, …) to
+    /// PNG, which the Messages API accepts.
+    private func attachPastedImage(from providers: [NSItemProvider]) {
+        guard let provider = providers.first(where: { $0.canLoadObject(ofClass: NSImage.self) }) else {
+            return
+        }
+        _ = provider.loadObject(ofClass: NSImage.self) { object, _ in
+            guard let image = object as? NSImage,
+                let tiff = image.tiffRepresentation,
+                let bitmap = NSBitmapImageRep(data: tiff),
+                let png = bitmap.representation(using: .png, properties: [:])
+            else { return }
+            DispatchQueue.main.async {
+                attachedImageData = png
+                attachedImageMimeType = "image/png"
+            }
         }
     }
 

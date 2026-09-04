@@ -54,7 +54,8 @@ struct RoadmapView: View {
 
     private var ranged: [RangedIssue] {
         guard let startField, let endField else { return [] }
-        return records.compactMap { issue in
+        let filtered = FilterEvaluation.apply(records, filters: config?.filters ?? [], registry: registry)
+        return filtered.compactMap { issue in
             guard let range = RoadmapResolution.resolveRange(startField: startField, endField: endField, issue: issue) else { return nil }
             return RangedIssue(issue: issue, start: range.start, end: range.end)
         }

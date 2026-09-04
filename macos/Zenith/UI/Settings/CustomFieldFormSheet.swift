@@ -82,6 +82,7 @@ struct CustomFieldFormSheet: View {
                                     Image(systemName: "minus.circle")
                                 }
                                 .buttonStyle(.borderless)
+                                .help("Remove option")
                             }
                         }
                         Button {
@@ -102,6 +103,7 @@ struct CustomFieldFormSheet: View {
                                         Image(systemName: "minus.circle")
                                     }
                                     .buttonStyle(.borderless)
+                                    .help("Remove iteration")
                                 }
                                 HStack {
                                     TextField("Start date (YYYY-MM-DD)", text: $iteration.startDate)

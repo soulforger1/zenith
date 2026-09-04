@@ -6,6 +6,11 @@ import Foundation
 public enum FilterOperator: String, Codable, Sendable, Equatable {
     case isEqual = "is"
     case isNot = "is_not"
+    /// Value is a JSON array; matches when the field holds any of them.
+    /// Not in the original web `FilterOperator` — added for the native
+    /// filter bar's multi-select milestone control. `config` is jsonb so
+    /// this needs no migration.
+    case isAnyOf = "is_any_of"
     case contains
     case isEmpty = "is_empty"
     case isNotEmpty = "is_not_empty"
@@ -133,6 +138,26 @@ public enum ViewConfig: Sendable, Equatable {
         case .table(let config): return try encoder.encode(config)
         case .board(let config): return try encoder.encode(config)
         case .roadmap(let config): return try encoder.encode(config)
+        }
+    }
+
+    /// The filter set for whichever view type this is — lets the shared
+    /// filter bar read filters without caring about the config shape.
+    public var filters: [FilterRule] {
+        switch self {
+        case .table(let config): return config.filters
+        case .board(let config): return config.filters
+        case .roadmap(let config): return config.filters
+        }
+    }
+
+    /// A copy of this config with its `filters` replaced — the write side
+    /// of the accessor above, used by the filter bar's autosave.
+    public func withFilters(_ filters: [FilterRule]) -> ViewConfig {
+        switch self {
+        case .table(var config): config.filters = filters; return .table(config)
+        case .board(var config): config.filters = filters; return .board(config)
+        case .roadmap(var config): config.filters = filters; return .roadmap(config)
         }
     }
 

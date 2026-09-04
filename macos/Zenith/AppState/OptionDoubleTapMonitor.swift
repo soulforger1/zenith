@@ -45,9 +45,32 @@ final class OptionDoubleTapMonitor {
         self.shell = shell
     }
 
+    /// Whether the global gesture is currently live.
+    var isRunning: Bool { globalMonitor != nil }
+
+    /// Silent check — never shows the system prompt (see
+    /// `requestPermissionAndOpenSettings`).
+    var hasAccessibilityPermission: Bool { AXIsProcessTrusted() }
+
+    /// Safe to call repeatedly: a no-op once running, and a silent no-op
+    /// (no system dialog) while the permission is missing. `ZenithApp`
+    /// re-calls it on `didBecomeActive` so granting the permission takes
+    /// effect without a relaunch.
     func start() {
         guard globalMonitor == nil, localMonitor == nil else { return }
-        guard ensureAccessibilityPermission() else { return }
+        // Only a silent check here. The "Zenith wants to control this
+        // computer" prompt is *never* triggered automatically: an
+        // ad-hoc-signed build is not remembered by TCC between launches,
+        // so auto-prompting fired the dialog on every single launch even
+        // after the user had already granted it. The user opts in
+        // explicitly via `requestPermissionAndOpenSettings()`
+        // (App menu ▸ "Enable ⌥⌥ Quick Capture…").
+        guard AXIsProcessTrusted() else {
+            NSLog(
+                "[option-double-tap] Accessibility permission not granted — the ⌥⌥ quick-capture "
+                    + "gesture is off. Enable it from the Zenith menu.")
+            return
+        }
 
         let mask: NSEvent.EventTypeMask = [.flagsChanged, .keyDown]
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] event in
@@ -71,24 +94,24 @@ final class OptionDoubleTapMonitor {
         localMonitor = nil
     }
 
-    /// Checks without prompting first (mirrors `isTrustedAccessibilityClient(false)`);
-    /// only if that fails does it trigger the system's own "Zenith wants to
-    /// control this computer" prompt, which also adds the app to System
-    /// Settings > Privacy & Security > Accessibility (unchecked). Either
-    /// way the feature just stays off until the user enables it there and
-    /// relaunches — nothing else in the app depends on it working.
-    private func ensureAccessibilityPermission() -> Bool {
-        if AXIsProcessTrusted() { return true }
+    /// Explicit, user-initiated opt-in. Fires the system's "Zenith wants
+    /// to control this computer" prompt (which also adds the app to
+    /// System Settings ▸ Privacy & Security ▸ Accessibility) and opens
+    /// that pane, then tries to `start()` so it takes effect the moment
+    /// the user flips the switch and returns — no relaunch needed.
+    func requestPermissionAndOpenSettings() {
         // The literal, rather than the `kAXTrustedCheckOptionPrompt`
         // global — that constant is an `Unmanaged<CFString>!`, which
         // Swift 6's strict concurrency checking flags as non-Sendable
         // shared mutable state. Its value is a stable, documented
         // ApplicationServices constant ("AXTrustedCheckOptionPrompt").
         _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
-        NSLog(
-            "[option-double-tap] Accessibility permission not granted — enable Zenith under "
-                + "System Settings > Privacy & Security > Accessibility, then relaunch, to use it.")
-        return false
+        if let url = URL(
+            string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+        {
+            NSWorkspace.shared.open(url)
+        }
+        start()
     }
 
     private func handle(_ event: NSEvent) {

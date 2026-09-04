@@ -116,9 +116,17 @@ flagging it here so it's a decision, not a surprise.
 
 ## OS integrations (subtask 5, re-confirmed here)
 
-- Global double-tap-Option hotkey: built, Accessibility-gated, not yet
-  live-tested by the user (still outstanding from subtask 5 — worth doing
-  before considering this fully signed off).
+- Global double-tap-Option hotkey: built, Accessibility-gated. The app
+  never triggers the system Accessibility prompt automatically (an
+  ad-hoc-signed build isn't remembered by TCC, so auto-prompting fired
+  the dialog on every launch) — it checks silently on start/re-activate
+  and the user opts in via App menu ▸ "Enable ⌥⌥ Quick Capture…". Not
+  yet live-tested by the user.
+- `claude` CLI PATH probe: resolved once and persisted to
+  `Application Support/Zenith/resolved-path.json` (was re-run every
+  launch, re-triggering folder-access prompts from the shell's startup
+  files); the CLI also runs with an app-owned CWD so its project
+  discovery stays out of protected folders.
 - `NSOpenPanel`-equivalent (`.fileImporter`) for image picking: working
   (Settings gallery, AI modal screenshot attach).
 - `NSPasteboard`: working (screenshot paste in the AI modal, "Copy

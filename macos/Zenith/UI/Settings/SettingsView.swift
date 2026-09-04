@@ -83,12 +83,14 @@ struct SettingsView: View {
                             Image(systemName: "pencil")
                         }
                         .buttonStyle(.borderless)
+                        .help("Edit field")
                         Button(role: .destructive) {
                             Task { await model.deleteCustomField(field.id) }
                         } label: {
                             Image(systemName: "trash")
                         }
                         .buttonStyle(.borderless)
+                        .help("Delete field")
                     }
                 }
             }
@@ -145,6 +147,7 @@ struct SettingsView: View {
                             Image(systemName: "trash")
                         }
                         .buttonStyle(.borderless)
+                        .help("Remove repo")
                     }
                 }
             }
@@ -267,6 +270,7 @@ private struct ImageThumbnail: View {
                 }
                 .buttonStyle(.plain)
                 .padding(3)
+                .help("Remove image")
             }
         }
         .onHover { isHovering = $0 }

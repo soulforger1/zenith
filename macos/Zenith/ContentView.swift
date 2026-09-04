@@ -13,6 +13,7 @@ struct ContentView: View {
     // hotkey monitor, which lives outside the view hierarchy entirely, can
     // share the same instance.
     @Environment(AppShellModel.self) private var shell
+    @Environment(ToastCenter.self) private var toasts
     @State private var spacesModel: SpacesListModel?
     @State private var spaceDetailModels: [UUID: SpaceDetailModel] = [:]
 
@@ -95,16 +96,17 @@ struct ContentView: View {
                 SetupView()
             }
         }
+        .toastOverlay(toasts)
         .task(id: environment.database == nil) {
             if let database = environment.database, spacesModel == nil {
-                spacesModel = SpacesListModel(database: database)
+                spacesModel = SpacesListModel(database: database, toasts: toasts)
             }
         }
     }
 
     private func ensureDetailModel(for space: Space?, database: ZenithDatabase) {
         guard let space, spaceDetailModels[space.id] == nil else { return }
-        spaceDetailModels[space.id] = SpaceDetailModel(space: space, database: database)
+        spaceDetailModels[space.id] = SpaceDetailModel(space: space, database: database, toasts: toasts)
     }
 
     /// Read-only lookup — never creates or mutates. `ensureDetailModel`
@@ -124,7 +126,26 @@ struct ContentView: View {
             }
         case .spaceView(let space, let view):
             detailContainer(for: space) { model in
-                ViewContentView(model: model, view: view)
+                // Resolve the live view from `model.views` — the route only
+                // holds a snapshot taken when the tab was clicked, so a
+                // filter edit (which mutates `config`) wouldn't otherwise
+                // reach the view content.
+                let liveView = model.views.first(where: { $0.id == view.id }) ?? view
+                VStack(spacing: 0) {
+                    ViewFilterBar(
+                        registry: FieldRegistry.build(
+                            customFields: model.customFields,
+                            milestones: model.milestones,
+                            repos: model.repos),
+                        milestones: model.milestones,
+                        filters: liveView.config.filters,
+                        onChange: { newFilters in
+                            Task { await model.updateViewFilters(liveView.id, filters: newFilters) }
+                        }
+                    )
+                    Divider()
+                    ViewContentView(model: model, view: liveView)
+                }
             }
         case .milestones(let space):
             detailContainer(for: space) { model in

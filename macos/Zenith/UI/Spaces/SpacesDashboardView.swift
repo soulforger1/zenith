@@ -54,6 +54,7 @@ struct SpacesDashboardView: View {
                 } label: {
                     Label("New space", systemImage: "plus")
                 }
+                .help("New space")
             }
         }
         .task { await model.load() }

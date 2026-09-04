@@ -13,6 +13,7 @@ import ZenithData
 final class SpaceDetailModel {
     private(set) var space: Space
     private let database: ZenithDatabase
+    private let toasts: ToastCenter
 
     private(set) var views: [ZView] = []
     private(set) var issues: [Issue] = []
@@ -23,9 +24,10 @@ final class SpaceDetailModel {
     private(set) var isLoading = false
     private(set) var loadError: String?
 
-    init(space: Space, database: ZenithDatabase) {
+    init(space: Space, database: ZenithDatabase, toasts: ToastCenter) {
         self.space = space
         self.database = database
+        self.toasts = toasts
     }
 
     /// The view a bare space link lands on: the one marked `isDefault`, or
@@ -93,8 +95,9 @@ final class SpaceDetailModel {
                 issues[index].status = status
                 issues[index].isClosed = status == .done
             }
+            toasts.success("Status updated")
         } catch {
-            loadError = error.diagnosticDescription
+            toasts.error(error.diagnosticDescription)
         }
     }
 
@@ -105,8 +108,9 @@ final class SpaceDetailModel {
             if let index = issues.firstIndex(where: { $0.id == issueId }) {
                 issues[index].priority = priority
             }
+            toasts.success("Priority updated")
         } catch {
-            loadError = error.diagnosticDescription
+            toasts.error(error.diagnosticDescription)
         }
     }
 
@@ -127,9 +131,10 @@ final class SpaceDetailModel {
             if let index = issues.firstIndex(where: { $0.id == issueId }) {
                 issues[index] = updated
             }
+            toasts.success("Saved")
             return true
         } catch {
-            loadError = error.diagnosticDescription
+            toasts.error(error.diagnosticDescription)
             return false
         }
     }
@@ -144,7 +149,28 @@ final class SpaceDetailModel {
         let view = try await ViewActions.createView(database, spaceId: space.id, name: name, type: type)
         views.append(view)
         views.sort { $0.position < $1.position }
+        toasts.success("View created")
         return view
+    }
+
+    /// Autosave from the shared filter bar (`ViewFilterBar`). Writes the
+    /// new filter set into the view's `config` and keeps `views` in sync
+    /// so every screen reading this view re-renders with it applied.
+    /// Silent on success — it fires on every checkbox toggle, so a toast
+    /// per change would be noise.
+    func updateViewFilters(_ viewId: UUID, filters: [FilterRule]) async {
+        guard let index = views.firstIndex(where: { $0.id == viewId }) else { return }
+        let previous = views[index]
+        let newConfig = previous.config.withFilters(filters)
+        views[index].config = newConfig  // optimistic — the bar reads back immediately
+        do {
+            if let updated = try await ViewActions.updateConfig(database, id: viewId, config: newConfig) {
+                views[index] = updated
+            }
+        } catch {
+            views[index] = previous
+            toasts.error(error.diagnosticDescription)
+        }
     }
 
     func createQuickIssue(title: String, status: IssueStatus) async {
@@ -152,8 +178,9 @@ final class SpaceDetailModel {
             try await IssueActions.createIssue(
                 database, spaceId: space.id, status: status, title: title)
             await load()
+            toasts.success("Task created")
         } catch {
-            loadError = error.diagnosticDescription
+            toasts.error(error.diagnosticDescription)
         }
     }
 
@@ -163,8 +190,9 @@ final class SpaceDetailModel {
         do {
             try await IssueActions.bulkUpdateStatus(database, ids: ids, status: status)
             await load()
+            toasts.success("Updated \(ids.count) tasks")
         } catch {
-            loadError = error.diagnosticDescription
+            toasts.error(error.diagnosticDescription)
         }
     }
 
@@ -172,8 +200,9 @@ final class SpaceDetailModel {
         do {
             try await IssueActions.bulkUpdatePriority(database, ids: ids, priority: priority)
             await load()
+            toasts.success("Updated \(ids.count) tasks")
         } catch {
-            loadError = error.diagnosticDescription
+            toasts.error(error.diagnosticDescription)
         }
     }
 
@@ -181,8 +210,9 @@ final class SpaceDetailModel {
         do {
             try await IssueActions.bulkDeleteIssues(database, ids: ids)
             issues.removeAll { ids.contains($0.id) }
+            toasts.success("Deleted \(ids.count) tasks")
         } catch {
-            loadError = error.diagnosticDescription
+            toasts.error(error.diagnosticDescription)
         }
     }
 
@@ -197,19 +227,36 @@ final class SpaceDetailModel {
     }
 
     func createSubtask(parentId: UUID, title: String) async -> IssueRecord? {
-        try? await IssueActions.createSubtask(database, parentId: parentId, title: title)
+        do {
+            let record = try await IssueActions.createSubtask(database, parentId: parentId, title: title)
+            toasts.success("Subtask added")
+            return record
+        } catch {
+            toasts.error(error.diagnosticDescription)
+            return nil
+        }
     }
 
     func createSubtasksFromTitles(parentId: UUID, titles: [String]) async -> [IssueRecord] {
-        (try? await IssueActions.createSubtasksFromTitles(database, parentId: parentId, titles: titles)) ?? []
+        do {
+            let records = try await IssueActions.createSubtasksFromTitles(
+                database, parentId: parentId, titles: titles)
+            toasts.success("Added \(records.count) subtasks")
+            return records
+        } catch {
+            toasts.error(error.diagnosticDescription)
+            return []
+        }
     }
 
     /// `nil` unlinks (promotes the child back to a standalone task).
     func setParent(_ id: UUID, parentId: UUID?) async -> String? {
         do {
             try await IssueActions.setParent(database, id: id, parentId: parentId)
+            toasts.success(parentId == nil ? "Subtask unlinked" : "Subtask linked")
             return nil
         } catch {
+            toasts.error(error.diagnosticDescription)
             return error.diagnosticDescription
         }
     }
@@ -222,8 +269,9 @@ final class SpaceDetailModel {
         do {
             try await IssueActions.deleteIssue(database, id: id)
             issues.removeAll { $0.id == id }
+            toasts.success("Task deleted")
         } catch {
-            loadError = error.diagnosticDescription
+            toasts.error(error.diagnosticDescription)
         }
     }
 
@@ -248,6 +296,7 @@ final class SpaceDetailModel {
         do {
             try await IssueActions.createIssueFromDraft(database, spaceId: space.id, draft: draft)
             await load()
+            toasts.success("Task created")
             return nil
         } catch {
             return error.diagnosticDescription
@@ -259,6 +308,7 @@ final class SpaceDetailModel {
         do {
             try await IssueActions.createIssuesFromDrafts(database, spaceId: space.id, drafts: drafts)
             await load()
+            toasts.success("\(drafts.count) tasks created")
             return nil
         } catch {
             return error.diagnosticDescription
@@ -273,6 +323,7 @@ final class SpaceDetailModel {
             .init(title: title, description: description, dueDate: dueDate)
         )
         await load()
+        toasts.success("Milestone created")
     }
 
     func updateMilestone(_ id: UUID, title: String, description: String?, dueDate: String?)
@@ -281,6 +332,7 @@ final class SpaceDetailModel {
         _ = try await MilestoneActions.updateMilestone(
             database, id: id, .init(title: title, description: description, dueDate: dueDate))
         await load()
+        toasts.success("Milestone updated")
     }
 
     func toggleMilestoneClosed(_ id: UUID, isClosed: Bool) async {
@@ -291,8 +343,9 @@ final class SpaceDetailModel {
             {
                 milestones[index] = updated
             }
+            toasts.success(isClosed ? "Milestone closed" : "Milestone reopened")
         } catch {
-            loadError = error.diagnosticDescription
+            toasts.error(error.diagnosticDescription)
         }
     }
 
@@ -300,8 +353,9 @@ final class SpaceDetailModel {
         do {
             try await MilestoneActions.deleteMilestone(database, id: id)
             milestones.removeAll { $0.id == id }
+            toasts.success("Milestone deleted")
         } catch {
-            loadError = error.diagnosticDescription
+            toasts.error(error.diagnosticDescription)
         }
     }
 
@@ -324,8 +378,9 @@ final class SpaceDetailModel {
             {
                 space = updated
             }
+            toasts.success("Context saved")
         } catch {
-            loadError = error.diagnosticDescription
+            toasts.error(error.diagnosticDescription)
         }
     }
 
@@ -339,6 +394,7 @@ final class SpaceDetailModel {
                 database, spaceId: space.id, name: name, type: type, options: options)
             customFields.append(field)
             customFields.sort { $0.position < $1.position }
+            toasts.success("Field created")
             return nil
         } catch {
             return error.diagnosticDescription
@@ -354,6 +410,7 @@ final class SpaceDetailModel {
             if let index = customFields.firstIndex(where: { $0.id == id }) {
                 customFields[index] = updated
             }
+            toasts.success("Field updated")
             return nil
         } catch {
             return error.diagnosticDescription
@@ -364,8 +421,9 @@ final class SpaceDetailModel {
         do {
             try await CustomFieldActions.deleteCustomField(database, id: id)
             customFields.removeAll { $0.id == id }
+            toasts.success("Field deleted")
         } catch {
-            loadError = error.diagnosticDescription
+            toasts.error(error.diagnosticDescription)
         }
     }
 
@@ -377,6 +435,7 @@ final class SpaceDetailModel {
                 database, spaceId: space.id, .init(name: name, url: url))
             repos.append(repo)
             repos.sort { $0.name < $1.name }
+            toasts.success("Repo added")
             return nil
         } catch {
             return error.diagnosticDescription
@@ -387,8 +446,9 @@ final class SpaceDetailModel {
         do {
             try await RepoActions.deleteRepo(database, id: id)
             repos.removeAll { $0.id == id }
+            toasts.success("Repo removed")
         } catch {
-            loadError = error.diagnosticDescription
+            toasts.error(error.diagnosticDescription)
         }
     }
 
@@ -404,6 +464,7 @@ final class SpaceDetailModel {
                 return nil
             }
             if let index = repos.firstIndex(where: { $0.id == id }) { repos[index] = updated }
+            toasts.success("Repo synced")
             return nil
         } catch {
             return error.diagnosticDescription
@@ -417,6 +478,7 @@ final class SpaceDetailModel {
             let image = try await SpaceActions.addSpaceImage(
                 database, spaceId: space.id, imageData: data, mimeType: mimeType, label: label)
             images.append(image)
+            toasts.success("Image added")
             return nil
         } catch {
             return error.diagnosticDescription
@@ -427,8 +489,9 @@ final class SpaceDetailModel {
         do {
             try await SpaceActions.deleteSpaceImage(database, id: id)
             images.removeAll { $0.id == id }
+            toasts.success("Image removed")
         } catch {
-            loadError = error.diagnosticDescription
+            toasts.error(error.diagnosticDescription)
         }
     }
 }

@@ -76,6 +76,7 @@ struct MilestoneDetailView: View {
                             ? "arrow.uturn.backward" : "checkmark"
                     )
                 }
+                .help(currentMilestone.isClosed ? "Reopen milestone" : "Close milestone")
             }
             ToolbarItem {
                 Button {
@@ -83,6 +84,7 @@ struct MilestoneDetailView: View {
                 } label: {
                     Label("Edit", systemImage: "pencil")
                 }
+                .help("Edit milestone")
             }
         }
         .modalOverlay(isPresented: $isEditing) {

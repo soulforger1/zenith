@@ -31,6 +31,7 @@ struct AppSidebar: View {
                 } label: {
                     Label("Paste task", systemImage: "sparkles")
                 }
+                .help("Turn pasted text or a screenshot into a task (press C, or double-tap ⌥)")
                 // Bare-key "c" (matching the web build) is handled by
                 // `InAppShortcutMonitor` — a local `NSEvent` monitor with
                 // the "not currently typing" guard SwiftUI's
@@ -72,6 +73,7 @@ struct AppSidebar: View {
             .buttonStyle(.plain)
             .padding(10)
             .background(.regularMaterial)
+            .help("Search tasks and run commands (⌘K)")
         }
     }
 }

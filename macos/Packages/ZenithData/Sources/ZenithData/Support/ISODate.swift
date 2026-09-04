@@ -37,6 +37,13 @@ public enum ISODate {
         format(Date())
     }
 
+    /// `Date` → `YYYY-MM-DD` in the current timezone. The inverse of
+    /// `parse` — used to bridge SwiftUI's `DatePicker` (which speaks
+    /// `Date`) to the `YYYY-MM-DD` strings stored in filter rules.
+    public static func string(from date: Date) -> String {
+        format(date)
+    }
+
     private static func format(_ date: Date) -> String {
         let components = calendar.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", components.year ?? 1970, components.month ?? 1, components.day ?? 1)

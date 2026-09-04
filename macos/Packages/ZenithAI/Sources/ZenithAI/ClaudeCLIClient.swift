@@ -1,4 +1,5 @@
 import Foundation
+import ZenithData
 
 /// Port of `lib/ai/claude.ts`. There's no Swift SDK for
 /// `@anthropic-ai/claude-agent-sdk` to lean on, so this talks to the
@@ -41,25 +42,121 @@ public actor ClaudeCLIClient {
 
     private var cachedPath: String?
 
+    private static let fallbackPath = "/usr/bin:/bin:/usr/sbin:/sbin"
+
+    /// On-disk record of a previously resolved PATH, keyed by the `$SHELL`
+    /// it was resolved for.
+    private struct PathCache: Codable {
+        var shell: String
+        var path: String
+    }
+
+    private static var pathCacheURL: URL? {
+        (try? AppConfig.configDirectory())?.appendingPathComponent("resolved-path.json")
+    }
+
+    /// A stable, app-owned working directory for the `claude` subprocess.
+    /// The CLI does project/config discovery relative to its CWD at
+    /// startup; pointing it here (inside Application Support, which is not
+    /// a TCC-protected location) keeps it out of the user's real project
+    /// tree and out of Documents/Desktop/Downloads, so it never triggers a
+    /// folder-access prompt. Falls back to the temp dir if Application
+    /// Support can't be created.
+    private static func workingDirectory() -> URL {
+        guard let base = try? AppConfig.configDirectory() else {
+            return URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+        }
+        let dir = base.appendingPathComponent("claude-cwd", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    /// True if a directory on `path` holds an executable named `claude` —
+    /// used to reject a stale disk cache (e.g. the CLI was reinstalled
+    /// elsewhere) without paying for another shell probe.
+    private static func claudeIsResolvable(on path: String) -> Bool {
+        path.split(separator: ":").contains { dir in
+            FileManager.default.isExecutableFile(
+                atPath: URL(fileURLWithPath: String(dir)).appendingPathComponent("claude").path)
+        }
+    }
+
+    /// Discards the persisted PATH — called when a spawn fails with
+    /// "claude not found" so the next attempt re-probes instead of being
+    /// stuck on a cache that points at a since-moved install.
+    private func invalidatePathCache() {
+        cachedPath = nil
+        if let url = Self.pathCacheURL { try? FileManager.default.removeItem(at: url) }
+    }
+
     /// GUI-launched macOS apps often get a minimal PATH
     /// (`/usr/bin:/bin:/usr/sbin:/sbin`) that doesn't include wherever the
     /// `claude` CLI is actually installed (nvm/homebrew/etc, only set up in
-    /// shell rc files). Fixed by asking the user's actual login shell what
-    /// PATH it resolves to and adopting that — same technique as Electron's
-    /// `fixPath()` (`electron/main.js`), and for the same OS-level reason,
-    /// not an Electron-specific quirk. Resolved once and cached for the
-    /// process's lifetime.
+    /// shell rc files). Fixed by asking the user's login shell what PATH it
+    /// resolves to and adopting that — same technique as Electron's
+    /// `fixPath()` (`electron/main.js`), for the same OS-level reason.
+    ///
+    /// The probe spawns a subprocess that sources the user's shell startup
+    /// files. On an ad-hoc-signed build macOS re-prompts for any
+    /// protected-folder access those files make and never remembers the
+    /// grant, so this is done **at most once ever**: the result is written
+    /// to `resolved-path.json` and reused on every later launch without
+    /// spawning anything.
+    ///
+    /// A `-lc` (login, non-interactive) probe is tried first — it sources
+    /// only `.zshenv`/`.zprofile`/`.zlogin`, where PATH belongs, skipping
+    /// the interactive `.zshrc` plugin set that's the usual source of
+    /// stray protected-folder access. Only if `claude` isn't on that PATH
+    /// does it fall back to `-ilc` (some setups only extend PATH from
+    /// `.zshrc`).
     private func resolvedPath() async -> String {
         if let cachedPath { return cachedPath }
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
+
+        if let url = Self.pathCacheURL,
+            let data = try? Data(contentsOf: url),
+            let cache = try? JSONDecoder().decode(PathCache.self, from: data),
+            cache.shell == shell, !cache.path.isEmpty,
+            Self.claudeIsResolvable(on: cache.path)
+        {
+            cachedPath = cache.path
+            return cache.path
+        }
+
+        let ownPath = ProcessInfo.processInfo.environment["PATH"]
+        var finalPath = Self.fallbackPath
+        for interactive in [false, true] {
+            guard let probed = await Self.probeShellPath(shell: shell, interactive: interactive),
+                !probed.isEmpty
+            else { continue }
+            finalPath = probed
+            if Self.claudeIsResolvable(on: probed) { break }
+        }
+        if !Self.claudeIsResolvable(on: finalPath), let ownPath, !ownPath.isEmpty {
+            finalPath = ownPath
+        }
+
+        cachedPath = finalPath
+        if let url = Self.pathCacheURL,
+            let encoded = try? JSONEncoder().encode(PathCache(shell: shell, path: finalPath))
+        {
+            try? encoded.write(to: url, options: .atomic)
+        }
+        return finalPath
+    }
+
+    private static func probeShellPath(shell: String, interactive: Bool) async -> String? {
         let marker = "___PATH_MARKER___"
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: shell)
-        process.arguments = ["-ilc", "echo -n \(marker); echo -n \"$PATH\""]
+        process.arguments = [interactive ? "-ilc" : "-lc", "echo -n \(marker); echo -n \"$PATH\""]
+        // A non-protected CWD so the startup files can't wander into a
+        // protected folder via a relative path / `$PWD`.
+        process.currentDirectoryURL = workingDirectory()
         let stdout = Pipe()
         process.standardOutput = stdout
-        process.standardError = Pipe() // discard — a broken rc file's warnings shouldn't leak into our output
+        process.standardError = Pipe()  // discard — a broken rc file's warnings shouldn't leak into our output
 
         let resolved: String? = await withCheckedContinuation { continuation in
             process.terminationHandler = { _ in
@@ -78,10 +175,7 @@ public actor ClaudeCLIClient {
             }
         }
 
-        let path = resolved?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let finalPath = (path?.isEmpty == false ? path! : ProcessInfo.processInfo.environment["PATH"]) ?? "/usr/bin:/bin:/usr/sbin:/sbin"
-        cachedPath = finalPath
-        return finalPath
+        return resolved?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// These are pure text-in/JSON-or-text-out calls — no filesystem or
@@ -115,6 +209,10 @@ public actor ClaudeCLIClient {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = ["claude"] + arguments
+        // Keep the CLI's project/config discovery inside an app-owned
+        // directory (not a TCC-protected one, and not the user's project
+        // tree) so it never provokes a folder-access prompt.
+        process.currentDirectoryURL = Self.workingDirectory()
         var environment = ProcessInfo.processInfo.environment
         environment["PATH"] = await resolvedPath()
         process.environment = environment
@@ -129,6 +227,7 @@ public actor ClaudeCLIClient {
         do {
             try process.run()
         } catch {
+            invalidatePathCache()
             throw ClaudeCliError(
                 "Claude Code CLI not found. Install it and run `claude login` (requires a Claude Pro/Max subscription)."
             )
@@ -164,6 +263,7 @@ public actor ClaudeCLIClient {
 
         let stderrText = String(data: errorData, encoding: .utf8) ?? ""
         if process.terminationStatus == 127 || stderrText.lowercased().contains("command not found") || stderrText.contains("No such file or directory") {
+            invalidatePathCache()
             throw ClaudeCliError(
                 "Claude Code CLI not found. Install it and run `claude login` (requires a Claude Pro/Max subscription)."
             )
