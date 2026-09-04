@@ -116,10 +116,17 @@ macOS Keychain for the GitHub token — see `docs/native-rewrite-audit.md`
 decision 7), so reinstalling/rebuilding the app doesn't require
 re-entering them unless that file/Keychain entry is removed.
 
+## Database schema
+
+The packaged app runs no migrations — it expects the schema to already
+exist in whatever Postgres database you point it at. Schema changes are
+authored with the dev-only Drizzle tooling at the repo root (`db/schema.ts`,
+`drizzle/`) and applied by hand with `psql`; see the "Changing the
+database schema" section of `AGENTS.md`.
+
 ## Updating the app later
 
-There's no auto-updater (Sparkle or otherwise) — none exists in the
-Electron build this replaces, and none was requested. To install a new
-build, quit Zenith, rebuild per above, and replace the `.app` in
-`/Applications`. Your database and Keychain-stored GitHub token are
-unaffected either way, since neither lives inside the app bundle.
+There's no auto-updater (Sparkle or otherwise) — none was requested. To
+install a new build, quit Zenith, rebuild per above, and replace the
+`.app` in `/Applications`. Your database and Keychain-stored GitHub token
+are unaffected either way, since neither lives inside the app bundle.

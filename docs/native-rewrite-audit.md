@@ -5,6 +5,13 @@ project's plan history for the full roadmap). This is the frozen snapshot of
 "what the Electron+Next.js app actually does" that later subtasks are ported
 against — keep it around after subtask 8 deletes the source it describes.
 
+> **Subtask 8 is done.** The `electron/` shell and the Next.js web app
+> (`app/`, `components/`, `lib/`, and the web/React build toolchain) were
+> removed once the native app in `macos/` reached parity. Only the
+> dev-only Drizzle schema tooling was kept (`db/schema.ts`, `drizzle/`,
+> `drizzle.config.ts`) — see decision 1 below. The removed source remains
+> in git history if you need to consult it.
+
 ## 1. Electron shell inventory
 
 Source: `electron/main.js` (CommonJS, esbuild-bundled — see file header
@@ -275,10 +282,11 @@ this doc with the reason.
 1. **Postgres access**: **PostgresNIO**, used directly from the native app
    (one app-lifetime actor, `ZenithDatabase`) — no local backend process, no
    SQLite migration. Mirrors today's topology (Drizzle → Postgres directly).
-   `lib/db/schema.ts` + `drizzle-kit` + `drizzle/migrations/*.sql` are kept
-   alive as a small, **unshipped, dev-only tooling folder** purely to
-   generate future migration SQL (applied by hand via `psql`) — the one
-   deliberate exception to "remove all web tooling" in subtask 8.
+   `db/schema.ts` (moved from `lib/db/schema.ts` in subtask 8) +
+   `drizzle-kit` + `drizzle/migrations/*.sql` are kept alive as a small,
+   **unshipped, dev-only tooling folder** purely to generate future
+   migration SQL (applied by hand via `psql`) — the one deliberate
+   exception to "remove all web tooling" in subtask 8.
 2. **Server Actions → Swift**: 1:1 file mapping, `lib/actions/*.ts` →
    `Actions/*.swift`, `lib/db/queries/*.ts` → `Queries/*.swift`, zod schemas
    → Swift structs with a throwing `validate()`. Business rules ported

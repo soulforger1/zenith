@@ -1,8 +1,7 @@
 import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
-// Next.js convention is .env.local (not .env) — load it explicitly since
-// drizzle-kit runs outside of Next's own env loading.
+// drizzle-kit does no env loading of its own; load .env.local explicitly.
 config({ path: ".env.local" });
 
 // Migrations need a direct (non-pooled) session connection — Supavisor's
@@ -15,7 +14,7 @@ if (!directUrl) {
 }
 
 export default defineConfig({
-  schema: "./lib/db/schema.ts",
+  schema: "./db/schema.ts",
   out: "./drizzle/migrations",
   dialect: "postgresql",
   dbCredentials: {
