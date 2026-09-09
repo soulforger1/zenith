@@ -25,6 +25,7 @@
 		57D3911B7EDF6C45BD53D92C /* IssueTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C92BFF19119A4BA39FC09A0 /* IssueTableView.swift */; };
 		587AD28F0C8B45EC534C1425 /* ZenithData in Frameworks */ = {isa = PBXBuildFile; productRef = DA1BD481FF230EFBD6C5AE8E /* ZenithData */; };
 		5F40E4E3333CE47D33223395 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 47C03EEA0E3AE79EAE6F404B /* Assets.xcassets */; };
+		6DD5ADF0E4ABDDE37800E7DE /* ZenithMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = A195804452863697600BF2B5 /* ZenithMark.swift */; };
 		7A5DA40FF58F7156D15151C7 /* KanbanBoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DA18F289D5746033C8CD2F8 /* KanbanBoardView.swift */; };
 		7BD22A169AB3E9CDCAF4F79C /* InAppShortcutMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B29BB92E0590E9D02D3B8C /* InAppShortcutMonitor.swift */; };
 		8C6B3EA2588F82648289A30C /* CustomFieldFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502C4A1EDC21C52F9D0E6F2F /* CustomFieldFormSheet.swift */; };
@@ -32,6 +33,7 @@
 		92B69F8DAC8734EC284DEE0B /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B951EA21A8EF356FC1050C0F /* SetupView.swift */; };
 		98B63AF0812E018936D0F62E /* ToastCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA60C3D3790F00FDB59F9A6A /* ToastCenter.swift */; };
 		A593ADC87D538CCA6763DD8E /* RoadmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADE0A5FF849DE098C2700FB8 /* RoadmapView.swift */; };
+		AB5EDD910FBC02CFA3043E13 /* OptionalDateField.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC2C8163F1060389640766A5 /* OptionalDateField.swift */; };
 		AD8B5E31AC32C0DA3F1F0D3B /* MilestoneDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F19302B5AA8631A6D5C2000 /* MilestoneDetailView.swift */; };
 		B12F43D7E39DDC5764011879 /* SpacesListModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F538EA75E0560E65245ED4 /* SpacesListModel.swift */; };
 		B53C4217B5F19CF665640855 /* ViewFilterBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FD5AB5D4B5DFD5156D17539 /* ViewFilterBar.swift */; };
@@ -79,12 +81,14 @@
 		92C9EC6351F5A52C52154778 /* SpacesDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesDashboardView.swift; sourceTree = "<group>"; };
 		9439D9F18B4A24B7936C98A7 /* ZenithData */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ZenithData; path = Packages/ZenithData; sourceTree = SOURCE_ROOT; };
 		9AA815F738F1D74F9A13BCB5 /* AppShellModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellModel.swift; sourceTree = "<group>"; };
+		A195804452863697600BF2B5 /* ZenithMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZenithMark.swift; sourceTree = "<group>"; };
 		A8D24D1DBDE26F2189101C37 /* NewViewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewViewSheet.swift; sourceTree = "<group>"; };
 		AD99B32988B0E46D54A231ED /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
 		ADC8024AA8B7FBC8CB96DCA7 /* ZenithApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZenithApp.swift; sourceTree = "<group>"; };
 		ADE0A5FF849DE098C2700FB8 /* RoadmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoadmapView.swift; sourceTree = "<group>"; };
 		B951EA21A8EF356FC1050C0F /* SetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupView.swift; sourceTree = "<group>"; };
 		CA60C3D3790F00FDB59F9A6A /* ToastCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastCenter.swift; sourceTree = "<group>"; };
+		FC2C8163F1060389640766A5 /* OptionalDateField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptionalDateField.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -241,7 +245,9 @@
 				1D0A8881692828CAF3EA4D42 /* FieldDisplayValueView.swift */,
 				AD99B32988B0E46D54A231ED /* FlowLayout.swift */,
 				8CB3A6A3BE8EECF33FDB5826 /* ModalOverlay.swift */,
+				FC2C8163F1060389640766A5 /* OptionalDateField.swift */,
 				85E0A23EE1F7CAB446B3F242 /* ToastOverlay.swift */,
+				A195804452863697600BF2B5 /* ZenithMark.swift */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -360,6 +366,7 @@
 				C8557C1D028C11C14292535C /* NewSpaceView.swift in Sources */,
 				E6577A748EA626DC9969AE64 /* NewViewSheet.swift in Sources */,
 				2329D5FA8EB56FE274CA9520 /* OptionDoubleTapMonitor.swift in Sources */,
+				AB5EDD910FBC02CFA3043E13 /* OptionalDateField.swift in Sources */,
 				B84E0B5CB8D0EC9F288E11F9 /* PasteTaskModal.swift in Sources */,
 				A593ADC87D538CCA6763DD8E /* RoadmapView.swift in Sources */,
 				0E18BF0BF85D3C50C81DB1DC /* SettingsView.swift in Sources */,
@@ -376,6 +383,7 @@
 				4486E41FAEDB8F69F2923171 /* ToastOverlay.swift in Sources */,
 				B53C4217B5F19CF665640855 /* ViewFilterBar.swift in Sources */,
 				2B2D324258CE6E60A27FABA5 /* ZenithApp.swift in Sources */,
+				6DD5ADF0E4ABDDE37800E7DE /* ZenithMark.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

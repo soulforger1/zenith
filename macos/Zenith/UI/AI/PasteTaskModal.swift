@@ -33,6 +33,7 @@ struct PasteTaskModal: View {
     @State private var isCommitting = false
     @State private var errorMessage: String?
     @State private var isImportingImage = false
+    @State private var pasteMonitor: Any?
 
     @State private var draft: EditableDraft?
     @State private var listDrafts: [EditableListDraft] = []
@@ -68,6 +69,8 @@ struct PasteTaskModal: View {
         // so it ensures its own target space's repos/milestones/custom
         // fields are loaded before the user gets to the draft-editing step.
         .task { if model.views.isEmpty { await model.load() } }
+        .onAppear { installPasteMonitor() }
+        .onDisappear { removePasteMonitor() }
     }
 
     // MARK: - Header
@@ -123,12 +126,9 @@ struct PasteTaskModal: View {
                     .background(.background, in: RoundedRectangle(cornerRadius: 8))
                     .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.separator))
                     // ⌘V with an image on the clipboard attaches it as the
-                    // screenshot; ⌘V with text pastes normally (this only
-                    // intercepts image flavors). Replaces the old explicit
-                    // "Paste screenshot" button.
-                    .onPasteCommand(of: [.image]) { providers in
-                        attachPastedImage(from: providers)
-                    }
+                    // screenshot (see `installPasteMonitor`); ⌘V with text
+                    // pastes normally. Replaces the old explicit "Paste
+                    // screenshot" button.
                 if text.isEmpty {
                     Text("Paste a task description, ticket text, or a screenshot (⌘V)…")
                         .foregroundStyle(.tertiary)
@@ -175,7 +175,11 @@ struct PasteTaskModal: View {
                 }
                 TextField("Estimate", text: draft.estimate, prompt: Text("Optional"))
                 TextField("Branch", text: draft.branch, prompt: Text("Optional"))
-                TextField("Due date", text: draft.dueDate, prompt: Text("YYYY-MM-DD, optional"))
+                LabeledContent("Due date") {
+                    OptionalDateField(value: draft.dueDate.wrappedValue) { newValue in
+                        draft.wrappedValue.dueDate = newValue ?? ""
+                    }
+                }
                 TextField("Tags", text: draft.tagText, prompt: Text("comma, separated"))
             }
 
@@ -223,8 +227,15 @@ struct PasteTaskModal: View {
     private func customFieldEditor(field: CustomField, draft: Binding<EditableDraft>) -> some View {
         let key = field.id.uuidString
         switch field.type {
-        case .text, .number, .date:
+        case .text, .number:
             TextField(field.name, text: stringBinding(draft, key: key, isNumber: field.type == .number))
+        case .date:
+            let dateBinding = stringBinding(draft, key: key, isNumber: false)
+            LabeledContent(field.name) {
+                OptionalDateField(value: dateBinding.wrappedValue) { newValue in
+                    dateBinding.wrappedValue = newValue ?? ""
+                }
+            }
         case .singleSelect:
             Picker(field.name, selection: selectBinding(draft, key: key)) {
                 Text("None").tag("")
@@ -559,24 +570,46 @@ struct PasteTaskModal: View {
         }
     }
 
-    /// Handles an image pasted into the text field (`.onPasteCommand`).
-    /// Normalizes whatever flavor the pasteboard carried (PNG, TIFF, …) to
-    /// PNG, which the Messages API accepts.
-    private func attachPastedImage(from providers: [NSItemProvider]) {
-        guard let provider = providers.first(where: { $0.canLoadObject(ofClass: NSImage.self) }) else {
-            return
+    /// The Messages API only accepts these four image media types (mirrors
+    /// `ClaudeCLIClient.imageMediaTypes`, which isn't public). Anything else
+    /// gets normalized to PNG via `attach(image:)` instead of being sent
+    /// through as-is and failing late, at Parse-time.
+    private static let supportedImageMimeTypes: Set<String> = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+
+    /// `TextEditor`'s backing `NSTextView` is the first responder and
+    /// already implements `paste(_:)` itself, so SwiftUI's
+    /// `.onPasteCommand(of:)` never gets a chance to intercept image
+    /// flavors on ⌘V — it's consumed by the text view first. Instead, a
+    /// local key-down monitor intercepts ⌘V ahead of the responder chain:
+    /// if the pasteboard holds an image, it's attached and the event is
+    /// swallowed; otherwise the event is passed through unchanged so plain
+    /// text still pastes normally into the `TextEditor`.
+    private func installPasteMonitor() {
+        pasteMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard mode == .single,
+                event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+                event.charactersIgnoringModifiers?.lowercased() == "v",
+                let image = NSImage(pasteboard: .general)
+            else { return event }
+            attach(image: image)
+            return nil
         }
-        _ = provider.loadObject(ofClass: NSImage.self) { object, _ in
-            guard let image = object as? NSImage,
-                let tiff = image.tiffRepresentation,
-                let bitmap = NSBitmapImageRep(data: tiff),
-                let png = bitmap.representation(using: .png, properties: [:])
-            else { return }
-            DispatchQueue.main.async {
-                attachedImageData = png
-                attachedImageMimeType = "image/png"
-            }
-        }
+    }
+
+    private func removePasteMonitor() {
+        if let pasteMonitor { NSEvent.removeMonitor(pasteMonitor) }
+        pasteMonitor = nil
+    }
+
+    /// Normalizes whatever flavor an image came in as (PNG, TIFF, HEIC, …)
+    /// to PNG, which the Messages API always accepts.
+    private func attach(image: NSImage) {
+        guard let tiff = image.tiffRepresentation,
+            let bitmap = NSBitmapImageRep(data: tiff),
+            let png = bitmap.representation(using: .png, properties: [:])
+        else { return }
+        attachedImageData = png
+        attachedImageMimeType = "image/png"
     }
 
     private func importImage(_ result: Result<URL, Error>) {
@@ -584,8 +617,16 @@ struct PasteTaskModal: View {
             let url = try result.get()
             guard url.startAccessingSecurityScopedResource() else { return }
             defer { url.stopAccessingSecurityScopedResource() }
-            attachedImageData = try Data(contentsOf: url)
-            attachedImageMimeType = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "image/png"
+            let data = try Data(contentsOf: url)
+            let mimeType = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType
+            if let mimeType, Self.supportedImageMimeTypes.contains(mimeType) {
+                attachedImageData = data
+                attachedImageMimeType = mimeType
+            } else if let image = NSImage(data: data) {
+                attach(image: image)
+            } else {
+                errorMessage = "Unsupported image file."
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

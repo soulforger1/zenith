@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <!-- Zenith brand mark: two overlapping "peaks" reaching a shared high
+       point. `currentColor` so it can be tinted (e.g. .accentColor) —
+       see macos/Zenith/UI/Support/ZenithMark.swift for the native
+       SwiftUI port used in-app. -->
+  <path d="M6 38 L20 12 L34 38 Z" fill="currentColor" opacity="0.45" />
+  <path d="M16 40 L30 8 L44 40 Z" fill="currentColor" />
+</svg>

@@ -97,13 +97,23 @@ file to back up or move between volumes:
 mkdir -p /tmp/zenith-dmg-stage
 cp -R /tmp/zenith-release-build/Build/Products/Release/Zenith.app /tmp/zenith-dmg-stage/
 ln -s /Applications /tmp/zenith-dmg-stage/Applications
+cp macos/branding/zenith.icns /tmp/zenith-dmg-stage/.VolumeIcon.icns
+SetFile -a C /tmp/zenith-dmg-stage
 hdiutil create -volname "Zenith" -srcfolder /tmp/zenith-dmg-stage \
   -ov -format UDZO ~/Desktop/Zenith.dmg
 ```
 
+The `.VolumeIcon.icns` copy plus `SetFile -a C` (marks the folder as
+having a custom icon) makes the mounted volume show Zenith's logo
+instead of the generic hard-drive icon. `SetFile` ships with Xcode's
+command line tools (`xcode-select --install` if it's missing).
+
 Mounting it gives the standard "drag Zenith.app onto the Applications
-shortcut" layout. This has been verified end to end (built, signed,
-DMG'd, mounted, launched from the mounted volume).
+shortcut" layout. The base flow (built, signed, DMG'd, mounted, launched
+from the mounted volume) has been verified end to end; the
+`.VolumeIcon.icns` step is the standard Finder mechanism for a custom
+volume icon (confirmed the flag gets set and the icon file lands on the
+volume) but hasn't been separately eyeballed in Finder.
 
 ## First launch / data setup
 

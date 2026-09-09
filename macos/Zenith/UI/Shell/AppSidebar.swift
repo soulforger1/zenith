@@ -55,6 +55,19 @@ struct AppSidebar: View {
         }
         .listStyle(.sidebar)
         .navigationTitle("Zenith")
+        .safeAreaInset(edge: .top) {
+            HStack(spacing: 8) {
+                ZenithMark()
+                    .frame(width: 16, height: 16)
+                    .padding(5)
+                    .background(Color.accentColor.opacity(0.15), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                Text("zenith")
+                    .font(.system(.body, design: .monospaced, weight: .semibold))
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+        }
         .toolbar {
             ToolbarItem {
                 Button(action: onNewSpace) {

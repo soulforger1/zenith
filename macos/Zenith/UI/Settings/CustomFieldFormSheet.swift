@@ -22,6 +22,15 @@ struct CustomFieldFormSheet: View {
     @State private var errorMessage: String?
     @State private var isSaving = false
 
+    /// Keyed by option/iteration id (iteration fields as `"<id>-title"` /
+    /// `"<id>-startDate"`). `Form`'s `.grouped` style is List-backed on
+    /// macOS, and a List row's first click only *selects* the row rather
+    /// than focusing a `TextField` inside it — the field silently eats no
+    /// keystrokes until a second click. The `.onTapGesture` below forces
+    /// focus straight into the field on the first click, and also lands
+    /// focus on a freshly-added row without requiring any click at all.
+    @FocusState private var focusedField: String?
+
     init(model: SpaceDetailModel, mode: Mode, onDismiss: @escaping () -> Void) {
         self.model = model
         self.mode = mode
@@ -76,6 +85,8 @@ struct CustomFieldFormSheet: View {
                                 .labelsHidden()
                                 .frame(width: 130)
                                 TextField("Option name", text: $option.name)
+                                    .focused($focusedField, equals: option.id)
+                                    .onTapGesture { focusedField = option.id }
                                 Button {
                                     options.removeAll { $0.id == option.id }
                                 } label: {
@@ -86,7 +97,9 @@ struct CustomFieldFormSheet: View {
                             }
                         }
                         Button {
-                            options.append(FieldOption(id: UUID().uuidString, name: "", color: FieldColor.gray.rawValue))
+                            let option = FieldOption(id: UUID().uuidString, name: "", color: FieldColor.gray.rawValue)
+                            options.append(option)
+                            focusedField = option.id
                         } label: {
                             Label("Add option", systemImage: "plus")
                         }
@@ -97,6 +110,8 @@ struct CustomFieldFormSheet: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack {
                                     TextField("Title", text: $iteration.title)
+                                        .focused($focusedField, equals: "\(iteration.id)-title")
+                                        .onTapGesture { focusedField = "\(iteration.id)-title" }
                                     Button {
                                         iterations.removeAll { $0.id == iteration.id }
                                     } label: {
@@ -107,6 +122,8 @@ struct CustomFieldFormSheet: View {
                                 }
                                 HStack {
                                     TextField("Start date (YYYY-MM-DD)", text: $iteration.startDate)
+                                        .focused($focusedField, equals: "\(iteration.id)-startDate")
+                                        .onTapGesture { focusedField = "\(iteration.id)-startDate" }
                                     Stepper(
                                         "\(iteration.durationDays) day\(iteration.durationDays == 1 ? "" : "s")",
                                         value: $iteration.durationDays, in: 1...365
@@ -115,9 +132,10 @@ struct CustomFieldFormSheet: View {
                             }
                         }
                         Button {
-                            iterations.append(
-                                IterationOption(
-                                    id: UUID().uuidString, title: "", startDate: "", durationDays: 14))
+                            let iteration = IterationOption(
+                                id: UUID().uuidString, title: "", startDate: "", durationDays: 14)
+                            iterations.append(iteration)
+                            focusedField = "\(iteration.id)-title"
                         } label: {
                             Label("Add iteration", systemImage: "plus")
                         }
