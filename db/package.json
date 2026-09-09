@@ -1,8 +1,8 @@
 {
-  "name": "zenith",
+  "name": "zenith-db",
   "version": "0.1.0",
   "private": true,
-  "description": "Dev-only Drizzle tooling for authoring Zenith's Postgres schema migrations. The app itself is the native macOS project under macos/.",
+  "description": "Dev-only Drizzle tooling for authoring Zenith's Postgres schema migrations (schema.ts + migrations/). Never shipped; the app is the native macOS project at the repo root.",
   "scripts": {
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

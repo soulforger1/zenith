@@ -8,12 +8,12 @@
 // for `iconutil -c icns` (used as the DMG volume icon; see
 // docs/build-and-package.md).
 //
-// The peak geometry mirrors `macos/Zenith/UI/Support/ZenithMark.swift`
+// The peak geometry mirrors `Zenith/UI/Support/ZenithMark.swift`
 // by hand — if you change one, change the other.
 //
-// Usage:
-//   swift macos/Scripts/generate-app-icon.swift
-//   iconutil -c icns macos/branding/zenith.iconset -o macos/branding/zenith.icns
+// Usage (from the repo root):
+//   swift Scripts/generate-app-icon.swift
+//   iconutil -c icns branding/zenith.iconset -o branding/zenith.icns
 //
 // Pure Core Graphics / ImageIO — no AppKit, no extra dependencies.
 
@@ -100,10 +100,9 @@ func writePNG(_ image: CGImage, to url: URL) {
 // MARK: - Output locations
 
 let scriptURL = URL(fileURLWithPath: #filePath)
-let macosDir = scriptURL.deletingLastPathComponent().deletingLastPathComponent() // macos/Scripts -> macos
-let repoRoot = macosDir.deletingLastPathComponent()
-let appIconDir = repoRoot.appendingPathComponent("macos/Zenith/Assets.xcassets/AppIcon.appiconset")
-let brandingDir = repoRoot.appendingPathComponent("macos/branding")
+let repoRoot = scriptURL.deletingLastPathComponent().deletingLastPathComponent() // Scripts/ -> repo root
+let appIconDir = repoRoot.appendingPathComponent("Zenith/Assets.xcassets/AppIcon.appiconset")
+let brandingDir = repoRoot.appendingPathComponent("branding")
 let iconsetDir = brandingDir.appendingPathComponent("zenith.iconset")
 
 try? FileManager.default.createDirectory(at: iconsetDir, withIntermediateDirectories: true)

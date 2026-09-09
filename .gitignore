@@ -1,11 +1,23 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies (Drizzle dev tooling)
-/node_modules
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
 
-# env files — never commit real secrets; .env.example is the template
+# xcodebuild -derivedDataPath build (used for local test builds)
+build/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Drizzle dev tooling deps (db/)
+db/node_modules/
+
+# env files — never commit real secrets; db/.env.example is the template
 .env*
-!.env.example
+!db/.env.example
 
 # misc
 .DS_Store
@@ -15,5 +27,3 @@
 npm-debug.log*
 yarn-debug.log*
 *.tsbuildinfo
-
-# The native app has its own ignore rules in macos/.gitignore

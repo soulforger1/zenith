@@ -12,8 +12,8 @@ assumes that isn't the goal.
 
 - Xcode (26.5 or later — the app targets macOS 14.0+, Swift 6).
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install
-  xcodegen`) — `macos/project.yml` is the source of truth for the Xcode
-  project; `macos/Zenith.xcodeproj` is generated from it and shouldn't be
+  xcodegen`) — `project.yml` is the source of truth for the Xcode
+  project; `Zenith.xcodeproj` is generated from it and shouldn't be
   hand-edited.
 - No Apple ID needs to be signed into Xcode, and no signing certificate
   needs to exist in Keychain Access — see "Signing" below.
@@ -25,7 +25,6 @@ automatically via its `path:` globs, but target/build-setting changes
 aren't):
 
 ```sh
-cd macos
 xcodegen generate
 ```
 
@@ -56,7 +55,7 @@ Zenith.app`.
 
 ## Building a release build
 
-From `macos/`:
+From the repo root:
 
 ```sh
 xcodebuild -project Zenith.xcodeproj -scheme Zenith -configuration Release \
@@ -77,7 +76,7 @@ cp -R /tmp/zenith-release-build/Build/Products/Release/Zenith.app /Applications/
 This is what the command above does under the hood, if you'd rather use
 Xcode directly:
 
-1. Open `macos/Zenith.xcodeproj`.
+1. Open `Zenith.xcodeproj`.
 2. **Product → Archive** (uses the `Zenith` scheme's `archive` build
    config, which `project.yml` pins to Release).
 3. In the **Organizer** window that opens, select the archive → **Distribute
@@ -97,7 +96,7 @@ file to back up or move between volumes:
 mkdir -p /tmp/zenith-dmg-stage
 cp -R /tmp/zenith-release-build/Build/Products/Release/Zenith.app /tmp/zenith-dmg-stage/
 ln -s /Applications /tmp/zenith-dmg-stage/Applications
-cp macos/branding/zenith.icns /tmp/zenith-dmg-stage/.VolumeIcon.icns
+cp branding/zenith.icns /tmp/zenith-dmg-stage/.VolumeIcon.icns
 SetFile -a C /tmp/zenith-dmg-stage
 hdiutil create -volname "Zenith" -srcfolder /tmp/zenith-dmg-stage \
   -ov -format UDZO ~/Desktop/Zenith.dmg
@@ -122,16 +121,16 @@ bundled server, no migration step in the packaged app itself. On first
 launch it shows a setup screen for the database connection string and
 (optional) GitHub token; both are stored outside the app bundle
 (`~/Library/Application Support/Zenith/config.json` for the database URL,
-macOS Keychain for the GitHub token — see `docs/native-rewrite-audit.md`
-decision 7), so reinstalling/rebuilding the app doesn't require
-re-entering them unless that file/Keychain entry is removed.
+macOS Keychain for the GitHub token), so reinstalling/rebuilding the app
+doesn't require re-entering them unless that file/Keychain entry is
+removed.
 
 ## Database schema
 
 The packaged app runs no migrations — it expects the schema to already
 exist in whatever Postgres database you point it at. Schema changes are
-authored with the dev-only Drizzle tooling at the repo root (`db/schema.ts`,
-`drizzle/`) and applied by hand with `psql`; see the "Changing the
+authored with the dev-only Drizzle tooling in `db/` (`db/schema.ts`,
+`db/migrations/`) and applied by hand with `psql`; see the "Changing the
 database schema" section of `AGENTS.md`.
 
 ## Updating the app later

@@ -14,8 +14,8 @@ if (!directUrl) {
 }
 
 export default defineConfig({
-  schema: "./db/schema.ts",
-  out: "./drizzle/migrations",
+  schema: "./schema.ts",
+  out: "./migrations",
   dialect: "postgresql",
   dbCredentials: {
     url: directUrl,

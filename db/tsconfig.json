@@ -10,6 +10,6 @@
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "include": ["db/**/*.ts", "drizzle.config.ts"],
+  "include": ["schema.ts", "drizzle.config.ts"],
   "exclude": ["node_modules"]
 }
