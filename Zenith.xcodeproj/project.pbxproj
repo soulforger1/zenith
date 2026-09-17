@@ -20,17 +20,20 @@
 		39036EDC4186E67F1599C616 /* ShellRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74CDED395483EE8A0F4979CF /* ShellRoute.swift */; };
 		4486E41FAEDB8F69F2923171 /* ToastOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85E0A23EE1F7CAB446B3F242 /* ToastOverlay.swift */; };
 		4C487F5C468CD124DB47DF84 /* ModalOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CB3A6A3BE8EECF33FDB5826 /* ModalOverlay.swift */; };
+		50C3AB3F8CAA53110397CB34 /* DataChangeBroadcaster.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA8D833BD426E6ED62D34C37 /* DataChangeBroadcaster.swift */; };
 		54F123531864C424911B4382 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4262F6F8D5A4CB3087B2A2F7 /* AppEnvironment.swift */; };
 		5571C13D1A33AE75D4364B8B /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A612C362F66922553DE2B7C /* Theme.swift */; };
 		57D3911B7EDF6C45BD53D92C /* IssueTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C92BFF19119A4BA39FC09A0 /* IssueTableView.swift */; };
 		587AD28F0C8B45EC534C1425 /* ZenithData in Frameworks */ = {isa = PBXBuildFile; productRef = DA1BD481FF230EFBD6C5AE8E /* ZenithData */; };
 		5F40E4E3333CE47D33223395 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 47C03EEA0E3AE79EAE6F404B /* Assets.xcassets */; };
+		5F8C248612BC39081055AD2B /* SyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FED570CA01FBA0EBE150AA90 /* SyncCoordinator.swift */; };
 		6DD5ADF0E4ABDDE37800E7DE /* ZenithMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = A195804452863697600BF2B5 /* ZenithMark.swift */; };
 		7A5DA40FF58F7156D15151C7 /* KanbanBoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DA18F289D5746033C8CD2F8 /* KanbanBoardView.swift */; };
+		7A86C5BF6CF080710E916307 /* ImportFromPostgresView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B62D7625840C28E041DEA0 /* ImportFromPostgresView.swift */; };
 		7BD22A169AB3E9CDCAF4F79C /* InAppShortcutMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B29BB92E0590E9D02D3B8C /* InAppShortcutMonitor.swift */; };
 		8C6B3EA2588F82648289A30C /* CustomFieldFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502C4A1EDC21C52F9D0E6F2F /* CustomFieldFormSheet.swift */; };
 		8E56F34FD69E8B4CDB5D2F87 /* SpaceHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5372DF2B386F9A9F35A878D5 /* SpaceHeaderView.swift */; };
-		92B69F8DAC8734EC284DEE0B /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B951EA21A8EF356FC1050C0F /* SetupView.swift */; };
+		9307A9E4B8E031CAE110D508 /* SyncSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADB741C5F197A1DF6EE4E7C7 /* SyncSettingsPane.swift */; };
 		98B63AF0812E018936D0F62E /* ToastCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA60C3D3790F00FDB59F9A6A /* ToastCenter.swift */; };
 		A593ADC87D538CCA6763DD8E /* RoadmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADE0A5FF849DE098C2700FB8 /* RoadmapView.swift */; };
 		AB5EDD910FBC02CFA3043E13 /* OptionalDateField.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC2C8163F1060389640766A5 /* OptionalDateField.swift */; };
@@ -38,6 +41,7 @@
 		B12F43D7E39DDC5764011879 /* SpacesListModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F538EA75E0560E65245ED4 /* SpacesListModel.swift */; };
 		B53C4217B5F19CF665640855 /* ViewFilterBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FD5AB5D4B5DFD5156D17539 /* ViewFilterBar.swift */; };
 		B84E0B5CB8D0EC9F288E11F9 /* PasteTaskModal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A3428B2E8FC1F40FFA7240 /* PasteTaskModal.swift */; };
+		BC3DF92B73B0AC87E1E1A64F /* SettingsRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80C0C81CF145F3F653798B08 /* SettingsRootView.swift */; };
 		C8557C1D028C11C14292535C /* NewSpaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C8FDACBDB23183A61494452 /* NewSpaceView.swift */; };
 		CBD9AAA53B650C1D0508B4F6 /* MilestoneFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67EC9C269A4B079F03FCE328 /* MilestoneFormSheet.swift */; };
 		CBE02647BF66445ADEFB29C2 /* MilestonesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 523503F96314C10B640D9DD5 /* MilestonesListView.swift */; };
@@ -46,17 +50,20 @@
 		E56CF5A7A92A667D380B3426 /* FieldDisplayValueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D0A8881692828CAF3EA4D42 /* FieldDisplayValueView.swift */; };
 		E6577A748EA626DC9969AE64 /* NewViewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8D24D1DBDE26F2189101C37 /* NewViewSheet.swift */; };
 		EFFAC186047DF4ADBA427590 /* SidebarState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15319BF1562C5256693A66C3 /* SidebarState.swift */; };
+		F88F7F15CB961251266BB946 /* ZenithSync in Frameworks */ = {isa = PBXBuildFile; productRef = AAE4015D082EDB77E718EDC0 /* ZenithSync */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		15319BF1562C5256693A66C3 /* SidebarState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarState.swift; sourceTree = "<group>"; };
 		1D0A8881692828CAF3EA4D42 /* FieldDisplayValueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldDisplayValueView.swift; sourceTree = "<group>"; };
+		29B62D7625840C28E041DEA0 /* ImportFromPostgresView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportFromPostgresView.swift; sourceTree = "<group>"; };
 		2AC8883D983F039A5F9AB8BF /* AppSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSidebar.swift; sourceTree = "<group>"; };
 		3C8FDACBDB23183A61494452 /* NewSpaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewSpaceView.swift; sourceTree = "<group>"; };
 		3CDA29474911FBD13F43533D /* SpaceDetailModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceDetailModel.swift; sourceTree = "<group>"; };
 		4262F6F8D5A4CB3087B2A2F7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		442D81CC67F7BEC92EA98E90 /* Zenith.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Zenith.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		47C03EEA0E3AE79EAE6F404B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4AB7D0426EA07AC9E4B4C2C7 /* ZenithSync */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ZenithSync; path = Packages/ZenithSync; sourceTree = SOURCE_ROOT; };
 		4DA18F289D5746033C8CD2F8 /* KanbanBoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KanbanBoardView.swift; sourceTree = "<group>"; };
 		502C4A1EDC21C52F9D0E6F2F /* CustomFieldFormSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomFieldFormSheet.swift; sourceTree = "<group>"; };
 		518F6CACC74D3B05280CAA53 /* ZenithAI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ZenithAI; path = Packages/ZenithAI; sourceTree = SOURCE_ROOT; };
@@ -75,6 +82,7 @@
 		7C92BFF19119A4BA39FC09A0 /* IssueTableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IssueTableView.swift; sourceTree = "<group>"; };
 		7E88EFC1A037F7CCD7B10C58 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		7FD5AB5D4B5DFD5156D17539 /* ViewFilterBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewFilterBar.swift; sourceTree = "<group>"; };
+		80C0C81CF145F3F653798B08 /* SettingsRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsRootView.swift; sourceTree = "<group>"; };
 		85E0A23EE1F7CAB446B3F242 /* ToastOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastOverlay.swift; sourceTree = "<group>"; };
 		8CB3A6A3BE8EECF33FDB5826 /* ModalOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModalOverlay.swift; sourceTree = "<group>"; };
 		8F19302B5AA8631A6D5C2000 /* MilestoneDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilestoneDetailView.swift; sourceTree = "<group>"; };
@@ -84,11 +92,13 @@
 		A195804452863697600BF2B5 /* ZenithMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZenithMark.swift; sourceTree = "<group>"; };
 		A8D24D1DBDE26F2189101C37 /* NewViewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewViewSheet.swift; sourceTree = "<group>"; };
 		AD99B32988B0E46D54A231ED /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
+		ADB741C5F197A1DF6EE4E7C7 /* SyncSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncSettingsPane.swift; sourceTree = "<group>"; };
 		ADC8024AA8B7FBC8CB96DCA7 /* ZenithApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZenithApp.swift; sourceTree = "<group>"; };
 		ADE0A5FF849DE098C2700FB8 /* RoadmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoadmapView.swift; sourceTree = "<group>"; };
-		B951EA21A8EF356FC1050C0F /* SetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupView.swift; sourceTree = "<group>"; };
+		BA8D833BD426E6ED62D34C37 /* DataChangeBroadcaster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataChangeBroadcaster.swift; sourceTree = "<group>"; };
 		CA60C3D3790F00FDB59F9A6A /* ToastCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastCenter.swift; sourceTree = "<group>"; };
 		FC2C8163F1060389640766A5 /* OptionalDateField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptionalDateField.swift; sourceTree = "<group>"; };
+		FED570CA01FBA0EBE150AA90 /* SyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncCoordinator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -98,6 +108,7 @@
 			files = (
 				587AD28F0C8B45EC534C1425 /* ZenithData in Frameworks */,
 				02B1280AA73A9EFC489364BA /* ZenithAI in Frameworks */,
+				F88F7F15CB961251266BB946 /* ZenithSync in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -116,7 +127,7 @@
 		113913C8DA76703162CA033A /* Setup */ = {
 			isa = PBXGroup;
 			children = (
-				B951EA21A8EF356FC1050C0F /* SetupView.swift */,
+				29B62D7625840C28E041DEA0 /* ImportFromPostgresView.swift */,
 			);
 			path = Setup;
 			sourceTree = "<group>";
@@ -137,6 +148,7 @@
 			isa = PBXGroup;
 			children = (
 				C76357BA4926F7A6F8515C24 /* AI */,
+				EAE7D994B0C4F3842CC02A2C /* AppSettings */,
 				8F18626AE7F3397C3BE23A60 /* Milestones */,
 				DEA482353CB4055FF3FB43BF /* Settings */,
 				116EB854BC23AB417B3AB2C2 /* Shell */,
@@ -170,6 +182,7 @@
 				ADC8024AA8B7FBC8CB96DCA7 /* ZenithApp.swift */,
 				79C163651E1DA1BED67E0048 /* AppState */,
 				113913C8DA76703162CA033A /* Setup */,
+				9ECDC364B625C1DA9621574B /* Sync */,
 				30AA253936738549D4B95B25 /* UI */,
 				AA090A59F63D3EFB473ABE64 /* ViewModels */,
 			);
@@ -192,6 +205,15 @@
 				523503F96314C10B640D9DD5 /* MilestonesListView.swift */,
 			);
 			path = Milestones;
+			sourceTree = "<group>";
+		};
+		9ECDC364B625C1DA9621574B /* Sync */ = {
+			isa = PBXGroup;
+			children = (
+				BA8D833BD426E6ED62D34C37 /* DataChangeBroadcaster.swift */,
+				FED570CA01FBA0EBE150AA90 /* SyncCoordinator.swift */,
+			);
+			path = Sync;
 			sourceTree = "<group>";
 		};
 		A05C1907C79AAE5B8D4234D0 /* Views */ = {
@@ -261,11 +283,21 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
+		EAE7D994B0C4F3842CC02A2C /* AppSettings */ = {
+			isa = PBXGroup;
+			children = (
+				80C0C81CF145F3F653798B08 /* SettingsRootView.swift */,
+				ADB741C5F197A1DF6EE4E7C7 /* SyncSettingsPane.swift */,
+			);
+			path = AppSettings;
+			sourceTree = "<group>";
+		};
 		F26A81E05E920BD19EE16246 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
 				518F6CACC74D3B05280CAA53 /* ZenithAI */,
 				9439D9F18B4A24B7936C98A7 /* ZenithData */,
+				4AB7D0426EA07AC9E4B4C2C7 /* ZenithSync */,
 			);
 			path = Packages;
 			sourceTree = "<group>";
@@ -289,6 +321,7 @@
 			packageProductDependencies = (
 				DA1BD481FF230EFBD6C5AE8E /* ZenithData */,
 				5EB28726BCD693DFB8F2262B /* ZenithAI */,
+				AAE4015D082EDB77E718EDC0 /* ZenithSync */,
 			);
 			productName = Zenith;
 			productReference = 442D81CC67F7BEC92EA98E90 /* Zenith.app */;
@@ -321,6 +354,7 @@
 			packageReferences = (
 				6872207B53A9A0DBD817D0BD /* XCLocalSwiftPackageReference "Packages/ZenithAI" */,
 				25E5823CC8CEA4B37749A33E /* XCLocalSwiftPackageReference "Packages/ZenithData" */,
+				58ED19A524FCCA6B82B25F1B /* XCLocalSwiftPackageReference "Packages/ZenithSync" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B09EF9F6E1B8554DB3619CAE /* Products */;
@@ -354,8 +388,10 @@
 				0BBCB71351B045F44369D670 /* CommandPaletteView.swift in Sources */,
 				25F7828F0D957325B2E6C717 /* ContentView.swift in Sources */,
 				8C6B3EA2588F82648289A30C /* CustomFieldFormSheet.swift in Sources */,
+				50C3AB3F8CAA53110397CB34 /* DataChangeBroadcaster.swift in Sources */,
 				E56CF5A7A92A667D380B3426 /* FieldDisplayValueView.swift in Sources */,
 				1AC0EE53B5B298F13A219033 /* FlowLayout.swift in Sources */,
+				7A86C5BF6CF080710E916307 /* ImportFromPostgresView.swift in Sources */,
 				7BD22A169AB3E9CDCAF4F79C /* InAppShortcutMonitor.swift in Sources */,
 				57D3911B7EDF6C45BD53D92C /* IssueTableView.swift in Sources */,
 				7A5DA40FF58F7156D15151C7 /* KanbanBoardView.swift in Sources */,
@@ -369,14 +405,16 @@
 				AB5EDD910FBC02CFA3043E13 /* OptionalDateField.swift in Sources */,
 				B84E0B5CB8D0EC9F288E11F9 /* PasteTaskModal.swift in Sources */,
 				A593ADC87D538CCA6763DD8E /* RoadmapView.swift in Sources */,
+				BC3DF92B73B0AC87E1E1A64F /* SettingsRootView.swift in Sources */,
 				0E18BF0BF85D3C50C81DB1DC /* SettingsView.swift in Sources */,
-				92B69F8DAC8734EC284DEE0B /* SetupView.swift in Sources */,
 				39036EDC4186E67F1599C616 /* ShellRoute.swift in Sources */,
 				EFFAC186047DF4ADBA427590 /* SidebarState.swift in Sources */,
 				1E207781A1FC33BCD16A8B2B /* SpaceDetailModel.swift in Sources */,
 				8E56F34FD69E8B4CDB5D2F87 /* SpaceHeaderView.swift in Sources */,
 				051D124245DC07D058D8F689 /* SpacesDashboardView.swift in Sources */,
 				B12F43D7E39DDC5764011879 /* SpacesListModel.swift in Sources */,
+				5F8C248612BC39081055AD2B /* SyncCoordinator.swift in Sources */,
+				9307A9E4B8E031CAE110D508 /* SyncSettingsPane.swift in Sources */,
 				049F5B55C39BB78C5986340B /* TaskDetailView.swift in Sources */,
 				5571C13D1A33AE75D4364B8B /* Theme.swift in Sources */,
 				98B63AF0812E018936D0F62E /* ToastCenter.swift in Sources */,
@@ -599,6 +637,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/ZenithData;
 		};
+		58ED19A524FCCA6B82B25F1B /* XCLocalSwiftPackageReference "Packages/ZenithSync" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/ZenithSync;
+		};
 		6872207B53A9A0DBD817D0BD /* XCLocalSwiftPackageReference "Packages/ZenithAI" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/ZenithAI;
@@ -609,6 +651,10 @@
 		5EB28726BCD693DFB8F2262B /* ZenithAI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ZenithAI;
+		};
+		AAE4015D082EDB77E718EDC0 /* ZenithSync */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ZenithSync;
 		};
 		DA1BD481FF230EFBD6C5AE8E /* ZenithData */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -1,27 +1,28 @@
-import PostgresNIO
+import Foundation
+import GRDB
 
-/// `updateIssueFields` (`lib/db/queries/issues.ts`) patches any subset of
-/// 13 independently-optional columns in one statement — building that with
-/// compile-time `PostgresQuery` string interpolation would mean a
-/// combinatorial explosion of hand-written cases, so this builds the
-/// `SET ...` clause and its positional bindings at runtime instead, the
-/// same shape Drizzle's own dynamic `.set(values)` produces under the hood.
+/// `updateIssueFields` (and `CustomFieldQueries.updateCustomField`) patch
+/// any subset of several independently-optional columns in one statement —
+/// building that with compile-time SQL would mean a combinatorial explosion
+/// of hand-written cases, so this builds the `SET ...` clause and its
+/// positional bindings at runtime instead.
 struct DynamicUpdate {
     private(set) var assignments: [String] = []
-    private var bindings = PostgresBindings()
+    private var arguments: [(any DatabaseValueConvertible)?] = []
 
-    /// Sets `column = $n` to a bound value.
-    mutating func set<Value: PostgresThrowingDynamicTypeEncodable>(_ column: String, _ value: Value) throws {
-        assignments.append("\(column) = $\(bindings.count + 1)")
-        try bindings.append(value)
+    /// Sets `column = ?` to a bound value.
+    mutating func set(_ column: String, _ value: (any DatabaseValueConvertible)?) {
+        assignments.append("\(column) = ?")
+        arguments.append(value)
     }
 
-    /// Sets `column = $n` to a bound value, using `sqlType` cast on the
-    /// placeholder — needed where Postgres can't infer the parameter type
-    /// from context alone (e.g. `custom_field_values || $1::jsonb`).
-    mutating func set<Value: PostgresThrowingDynamicTypeEncodable>(_ column: String, raw sql: String, binding value: Value) throws {
-        assignments.append("\(column) = \(sql.replacingOccurrences(of: "$1", with: "$\(bindings.count + 1)"))")
-        try bindings.append(value)
+    /// Sets `column = <sql>` where `sql` contains exactly one `?` — used
+    /// where the assignment isn't a plain bound value (e.g.
+    /// `custom_field_values` merged via a Swift-side read-modify-write,
+    /// still expressed here as a normal bound replacement value).
+    mutating func setRaw(_ column: String, sql: String, binding value: (any DatabaseValueConvertible)?) {
+        assignments.append("\(column) = \(sql)")
+        arguments.append(value)
     }
 
     mutating func setNull(_ column: String) {
@@ -30,14 +31,19 @@ struct DynamicUpdate {
 
     var isEmpty: Bool { assignments.isEmpty }
 
-    /// Builds `UPDATE <table> SET ... WHERE id = $n [RETURNING ...]`.
-    func buildQuery(table: String, whereIdEquals id: some PostgresThrowingDynamicTypeEncodable, returning columns: String? = nil) throws -> PostgresQuery {
-        var finalBindings = bindings
-        let idPlaceholder = "$\(finalBindings.count + 1)"
-        try finalBindings.append(id)
-        let setClause = (assignments + ["updated_at = now()"]).joined(separator: ", ")
-        var sql = "UPDATE \(table) SET \(setClause) WHERE id = \(idPlaceholder)"
-        if let columns { sql += " RETURNING \(columns)" }
-        return PostgresQuery(unsafeSQL: sql, binds: finalBindings)
+    /// Executes `UPDATE <table> SET ..., updated_at = ? WHERE id = ?
+    /// RETURNING *` and returns the updated row, or `nil` if no row
+    /// matched. `updated_at` is always bumped, even when `assignments` is
+    /// otherwise empty — mirrors the previous Postgres behavior and keeps
+    /// the sync layer's "every write touches `updated_at`" invariant.
+    func execute(_ db: Database, table: String, id: String, updatedAt: Date = Date()) throws -> Row? {
+        var finalAssignments = assignments
+        var finalArguments = arguments
+        finalAssignments.append("updated_at = ?")
+        finalArguments.append(updatedAt)
+        finalArguments.append(id)
+
+        let sql = "UPDATE \(table) SET \(finalAssignments.joined(separator: ", ")) WHERE id = ? RETURNING *"
+        return try Row.fetchOne(db, sql: sql, arguments: StatementArguments(finalArguments))
     }
 }

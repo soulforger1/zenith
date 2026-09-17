@@ -1,89 +1,96 @@
 import Foundation
-import PostgresNIO
+import GRDB
 
-/// Port of `lib/db/queries/milestones.ts`.
+/// Local-store queries for the `milestones` table.
 public enum MilestoneQueries {
-    private static func map(_ row: PostgresRow) throws -> Milestone {
-        let r = row.makeRandomAccess()
-        return Milestone(
-            id: try r["id"].decode(UUID.self),
-            spaceId: try r["space_id"].decode(UUID.self),
-            title: try r["title"].decode(String.self),
-            description: try r["description"].decode(String?.self),
-            dueDate: try r["due_date"].decode(String?.self),
-            status: try r["status"].decode(String.self),
-            closedAt: try r["closed_at"].decode(Date?.self),
-            createdAt: try r["created_at"].decode(Date.self),
-            updatedAt: try r["updated_at"].decode(Date.self)
+    private static func map(_ row: Row) throws -> Milestone {
+        Milestone(
+            id: try row.requireUUID("id"),
+            spaceId: try row.requireUUID("space_id"),
+            title: try row.requireString("title"),
+            description: row.optionalString("description"),
+            dueDate: row.optionalString("due_date"),
+            status: try row.requireString("status"),
+            closedAt: row.optionalDate("closed_at"),
+            createdAt: try row.requireDate("created_at"),
+            updatedAt: try row.requireDate("updated_at")
         )
     }
 
-    // `due_date::text` — see `IssueQueries.columns`'s comment: decoding a
-    // Postgres `date` column straight into `String` without casting reads
-    // its raw binary representation as garbage text.
-    private static let columns = "id, space_id, title, description, due_date::text AS due_date, status, closed_at, created_at, updated_at"
-
     public static func getMilestonesForSpace(_ db: ZenithDatabase, spaceId: UUID) async throws -> [Milestone] {
-        let rows = try await db.query("""
-            SELECT \(unescaped: columns) FROM milestones WHERE space_id = \(spaceId)
-            ORDER BY due_date ASC, created_at ASC
-            """)
-        var results: [Milestone] = []
-        for try await row in rows { results.append(try map(row)) }
-        return results
+        try await db.read { d in
+            try Row.fetchAll(
+                d, sql: "SELECT * FROM milestones WHERE space_id = ? ORDER BY due_date ASC, created_at ASC",
+                arguments: [spaceId.databaseText]
+            ).map(map)
+        }
     }
 
     public static func getMilestoneById(_ db: ZenithDatabase, id: UUID) async throws -> Milestone? {
-        let rows = try await db.query("SELECT \(unescaped: columns) FROM milestones WHERE id = \(id) LIMIT 1")
-        for try await row in rows { return try map(row) }
-        return nil
+        try await db.read { d in
+            guard let row = try Row.fetchOne(d, sql: "SELECT * FROM milestones WHERE id = ? LIMIT 1", arguments: [id.databaseText]) else {
+                return nil
+            }
+            return try map(row)
+        }
     }
 
     public static func createMilestone(
         _ db: ZenithDatabase, spaceId: UUID, title: String, description: String?, dueDate: String?
     ) async throws -> Milestone {
-        let rows = try await db.query("""
-            INSERT INTO milestones (space_id, title, description, due_date)
-            VALUES (\(spaceId), \(title), \(description), \(dueDate)::date)
-            RETURNING \(unescaped: columns)
-            """)
-        for try await row in rows { return try map(row) }
-        throw DatabaseError.insertReturnedNoRow
+        try await db.write { d in
+            let id = UUID()
+            let now = Date()
+            try d.execute(
+                sql: """
+                    INSERT INTO milestones (id, space_id, title, description, due_date, status, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, 'open', ?, ?)
+                    """,
+                arguments: [id.databaseText, spaceId.databaseText, title, description, dueDate, now, now]
+            )
+            guard let row = try Row.fetchOne(d, sql: "SELECT * FROM milestones WHERE id = ?", arguments: [id.databaseText]) else {
+                throw StoreError.insertReturnedNoRow
+            }
+            return try map(row)
+        }
     }
 
-    /// `title`/`description`/`dueDate` are all always supplied together by
-    /// the edit form's single "save" submit (see `updateMilestoneAction`) —
-    /// no partial-patch case exists on the TS side for this table.
+    /// `title`/`description`/`dueDate` are always supplied together by the
+    /// edit form's single "save" submit — no partial-patch case exists for
+    /// this table.
     public static func updateMilestone(
         _ db: ZenithDatabase, id: UUID, title: String, description: String?, dueDate: String?
     ) async throws -> Milestone? {
-        let rows = try await db.query("""
-            UPDATE milestones SET title = \(title), description = \(description), due_date = \(dueDate)::date, updated_at = now()
-            WHERE id = \(id) RETURNING \(unescaped: columns)
-            """)
-        for try await row in rows { return try map(row) }
-        return nil
+        try await db.write { d in
+            try d.execute(
+                sql: "UPDATE milestones SET title = ?, description = ?, due_date = ?, updated_at = ? WHERE id = ?",
+                arguments: [title, description, dueDate, Date(), id.databaseText]
+            )
+            guard let row = try Row.fetchOne(d, sql: "SELECT * FROM milestones WHERE id = ?", arguments: [id.databaseText]) else {
+                return nil
+            }
+            return try map(row)
+        }
     }
 
     public static func setClosed(_ db: ZenithDatabase, id: UUID, isClosed: Bool) async throws -> Milestone? {
-        let status = isClosed ? "closed" : "open"
-        let rows: PostgresRowSequence
-        if isClosed {
-            rows = try await db.query("""
-                UPDATE milestones SET status = \(status), closed_at = now(), updated_at = now()
-                WHERE id = \(id) RETURNING \(unescaped: columns)
-                """)
-        } else {
-            rows = try await db.query("""
-                UPDATE milestones SET status = \(status), closed_at = NULL, updated_at = now()
-                WHERE id = \(id) RETURNING \(unescaped: columns)
-                """)
+        try await db.write { d in
+            let now = Date()
+            let status = isClosed ? "closed" : "open"
+            try d.execute(
+                sql: "UPDATE milestones SET status = ?, closed_at = ?, updated_at = ? WHERE id = ?",
+                arguments: [status, isClosed ? now : nil, now, id.databaseText]
+            )
+            guard let row = try Row.fetchOne(d, sql: "SELECT * FROM milestones WHERE id = ?", arguments: [id.databaseText]) else {
+                return nil
+            }
+            return try map(row)
         }
-        for try await row in rows { return try map(row) }
-        return nil
     }
 
     public static func deleteMilestone(_ db: ZenithDatabase, id: UUID) async throws {
-        try await db.execute("DELETE FROM milestones WHERE id = \(id)")
+        try await db.write { d in
+            try d.execute(sql: "DELETE FROM milestones WHERE id = ?", arguments: [id.databaseText])
+        }
     }
 }

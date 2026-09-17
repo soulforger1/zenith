@@ -1,30 +1,79 @@
 import Foundation
+import GRDB
 import Testing
 
 @testable import ZenithData
 
 @Suite("DynamicUpdate")
 struct DynamicUpdateTests {
-    @Test("raw set renumbers its $1 placeholder to the real bind position")
-    func rawSetRenumbers() throws {
-        var update = DynamicUpdate()
-        try update.set("title", "x")  // $1
-        try update.set("due_date", raw: "$1::date", binding: "2026-01-15")  // $2
-        let query = try update.buildQuery(table: "issues", whereIdEquals: UUID())
-        #expect(query.sql.contains("due_date = $2::date"))
+    private func makeQueue() throws -> DatabaseQueue {
+        let queue = try DatabaseQueue()
+        try zenithMigrator.migrate(queue)
+        return queue
     }
 
-    /// Regression guard for `42804: column "due_date" is of type date but
-    /// expression is of type text` — PostgresNIO binds a Swift `String` as
-    /// `text`, which Postgres won't coerce to `date` even in an assignment,
-    /// so every `date`-column write must cast the placeholder.
-    @Test("date columns are written with an explicit ::date cast")
-    func dateColumnsAreCast() throws {
-        var update = DynamicUpdate()
-        try update.set("due_date", raw: "$1::date", binding: "2026-01-15")
-        try update.set("start_date", raw: "$1::date", binding: "2026-01-01")
-        let query = try update.buildQuery(table: "issues", whereIdEquals: UUID())
-        #expect(query.sql.contains("due_date = $1::date"))
-        #expect(query.sql.contains("start_date = $2::date"))
+    @Test("executes against a real table and always bumps updated_at")
+    func executesAndBumpsUpdatedAt() throws {
+        let queue = try makeQueue()
+        let id = UUID().databaseText
+        try queue.write { db in
+            try db.execute(
+                sql: "INSERT INTO spaces (id, name, slug, created_at, updated_at) VALUES (?, 'A', 'a', ?, ?)",
+                arguments: [id, Date(timeIntervalSince1970: 0), Date(timeIntervalSince1970: 0)]
+            )
+        }
+
+        let updatedRow = try queue.write { db -> Row? in
+            var update = DynamicUpdate()
+            update.set("name", "B")
+            return try update.execute(db, table: "spaces", id: id)
+        }
+
+        #expect(updatedRow?["name"] as String? == "B")
+        let updatedAt: Date? = updatedRow?["updated_at"]
+        #expect(updatedAt != nil)
+        #expect(updatedAt!.timeIntervalSinceNow > -5)
+    }
+
+    @Test("an empty patch still bumps updated_at")
+    func emptyPatchStillBumpsUpdatedAt() throws {
+        let queue = try makeQueue()
+        let id = UUID().databaseText
+        let past = Date(timeIntervalSince1970: 0)
+        try queue.write { db in
+            try db.execute(
+                sql: "INSERT INTO spaces (id, name, slug, created_at, updated_at) VALUES (?, 'A', 'a', ?, ?)",
+                arguments: [id, past, past]
+            )
+        }
+
+        let row = try queue.write { db -> Row? in
+            let update = DynamicUpdate()
+            return try update.execute(db, table: "spaces", id: id)
+        }
+
+        let updatedAt: Date? = row?["updated_at"]
+        #expect(updatedAt != nil)
+        #expect(updatedAt! > past)
+    }
+
+    @Test("setNull clears a column")
+    func setNullClearsColumn() throws {
+        let queue = try makeQueue()
+        let id = UUID().databaseText
+        try queue.write { db in
+            try db.execute(
+                sql: "INSERT INTO spaces (id, name, slug, description, created_at, updated_at) VALUES (?, 'A', 'a', 'desc', ?, ?)",
+                arguments: [id, Date(), Date()]
+            )
+        }
+
+        let row = try queue.write { db -> Row? in
+            var update = DynamicUpdate()
+            update.setNull("description")
+            return try update.execute(db, table: "spaces", id: id)
+        }
+
+        #expect(row?["description"] as String? == nil)
     }
 }

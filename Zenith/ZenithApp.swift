@@ -22,6 +22,13 @@ struct ZenithApp: App {
     // App-wide transient feedback, injected alongside `shell` so the view
     // models (which own every CRUD path) can post success/error toasts.
     @State private var toasts = ToastCenter()
+    // The periodic sync loop's "something changed, reload" signal and the
+    // coordinator that drives it — both constructible with no arguments so
+    // they can be plain eager `@State` like the above; `syncCoordinator`
+    // gets wired to the local store lazily once it exists (see the second
+    // `.task` below), same shape `ContentView` uses for `spacesModel`.
+    @State private var broadcaster = DataChangeBroadcaster()
+    @State private var syncCoordinator = SyncCoordinator()
     @State private var hotkeyMonitor: OptionDoubleTapMonitor?
     @State private var shortcutMonitor: InAppShortcutMonitor?
 
@@ -31,6 +38,8 @@ struct ZenithApp: App {
                 .environment(environment)
                 .environment(shell)
                 .environment(toasts)
+                .environment(broadcaster)
+                .environment(syncCoordinator)
                 .task {
                     guard hotkeyMonitor == nil else { return }
                     let monitor = OptionDoubleTapMonitor(shell: shell)
@@ -41,13 +50,20 @@ struct ZenithApp: App {
                     shortcuts.start()
                     shortcutMonitor = shortcuts
                 }
+                .task(id: environment.database == nil) {
+                    guard let database = environment.database else { return }
+                    syncCoordinator.configure(database: database, broadcaster: broadcaster, settings: environment.syncSettings)
+                }
                 // If the user grants Accessibility in System Settings and
                 // switches back, pick it up without a relaunch. `start()`
                 // is a no-op when already running or still not permitted.
+                // Also a natural moment to catch up on sync — mirrors why
+                // most apps sync on foreground, not just on a timer.
                 .onReceive(
                     NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
                 ) { _ in
                     hotkeyMonitor?.start()
+                    syncCoordinator.onAppForeground()
                 }
         }
         .defaultSize(width: 1200, height: 800)
@@ -73,6 +89,10 @@ struct ZenithApp: App {
                 Button("Enable ⌥⌥ Quick Capture…") {
                     hotkeyMonitor?.requestPermissionAndOpenSettings()
                 }
+
+                Button("Import from Postgres…") {
+                    environment.presentPostgresImport()
+                }
             }
             CommandGroup(after: .toolbar) {
                 Button("Search & Commands…") {
@@ -80,6 +100,13 @@ struct ZenithApp: App {
                 }
                 .keyboardShortcut("k", modifiers: .command)
             }
+        }
+
+        // macOS wires ⌘, to this automatically.
+        Settings {
+            SettingsRootView()
+                .environment(environment)
+                .environment(syncCoordinator)
         }
     }
 }

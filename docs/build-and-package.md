@@ -116,26 +116,40 @@ volume) but hasn't been separately eyeballed in Finder.
 
 ## First launch / data setup
 
-Zenith talks directly to whatever Postgres database you point it at — no
-bundled server, no migration step in the packaged app itself. On first
-launch it shows a setup screen for the database connection string and
-(optional) GitHub token; both are stored outside the app bundle
-(`~/Library/Application Support/Zenith/config.json` for the database URL,
-macOS Keychain for the GitHub token), so reinstalling/rebuilding the app
-doesn't require re-entering them unless that file/Keychain entry is
-removed.
+Zenith is local-first: it stores everything in a SQLite database at
+`~/Library/Application Support/Zenith/zenith.sqlite`, created and migrated
+in-process on first launch — no setup screen, no bundled server, nothing to
+point it at. That file is your data; back it up like any other document if
+you care about it (there's no cloud copy unless you turn on sync).
+
+If `~/Library/Application Support/Zenith/config.json` already exists from a
+pre-local-first install (it held a Postgres connection string), the app
+offers a one-time import of that database's spaces/issues/etc. into the
+new local store on first launch — see "Import from Postgres…" in the app
+menu to run it again later. `postgres-nio` is still bundled (in the
+separate `ZenithSync` package) for this importer and for the optional,
+off-by-default Postgres sync target, configured in Settings → Sync (⌘,) —
+see [`docs/sync.md`](sync.md).
+
+An optional GitHub token (for repo-context AI summaries), and the Postgres
+sync target's connection string once one's entered, are stored in the
+macOS Keychain.
 
 ## Database schema
 
-The packaged app runs no migrations — it expects the schema to already
-exist in whatever Postgres database you point it at. Schema changes are
-authored with the dev-only Drizzle tooling in `db/` (`db/schema.ts`,
-`db/migrations/`) and applied by hand with `psql`; see the "Changing the
-database schema" section of `AGENTS.md`.
+The packaged app migrates its own local SQLite schema in-process (see
+`Packages/ZenithData/Sources/ZenithData/Database/Schema/Migrations.swift`)
+— nothing to run by hand for the local store. The dev-only Drizzle tooling
+in `db/` (`db/schema.ts`, `db/migrations/`) is separate: it authors the
+schema for the *optional Postgres sync target* (and for the one-time
+importer reading an existing pre-local-first database), applied by hand
+with `psql`. See "Changing the local (SQLite) schema" / "Changing the
+Postgres sync target's schema" in `AGENTS.md`.
 
 ## Updating the app later
 
 There's no auto-updater (Sparkle or otherwise) — none was requested. To
 install a new build, quit Zenith, rebuild per above, and replace the
-`.app` in `/Applications`. Your database and Keychain-stored GitHub token
-are unaffected either way, since neither lives inside the app bundle.
+`.app` in `/Applications`. Your local `zenith.sqlite` database and
+Keychain-stored credentials are unaffected either way, since none of them
+live inside the app bundle.

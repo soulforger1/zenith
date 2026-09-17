@@ -1,82 +1,85 @@
 import Foundation
-import PostgresNIO
+import GRDB
 
-/// Port of `lib/db/queries/custom-fields.ts`.
+/// Local-store queries for the `custom_fields` table.
 public enum CustomFieldQueries {
-    private static func map(_ row: PostgresRow) throws -> CustomField {
-        let r = row.makeRandomAccess()
-        let type = try r["type"].decodeEnum(CustomFieldType.self)
-        let optionsRaw = try r["options"].decode(AnyCodableValue.self)
+    private static func map(_ row: Row) throws -> CustomField {
+        let type = try row.requireEnum("type", CustomFieldType.self)
         return CustomField(
-            id: try r["id"].decode(UUID.self),
-            spaceId: try r["space_id"].decode(UUID.self),
-            key: try r["key"].decode(String.self),
-            name: try r["name"].decode(String.self),
+            id: try row.requireUUID("id"),
+            spaceId: try row.requireUUID("space_id"),
+            key: try row.requireString("key"),
+            name: try row.requireString("name"),
             type: type,
-            options: try FieldOptions.decode(jsonData: optionsRaw.asJSONData(), type: type),
-            position: try r["position"].decode(Double.self),
-            createdAt: try r["created_at"].decode(Date.self),
-            updatedAt: try r["updated_at"].decode(Date.self)
+            options: try FieldOptions.fromJSONText(row.optionalString("options"), type: type),
+            position: try row.requireDouble("position"),
+            createdAt: try row.requireDate("created_at"),
+            updatedAt: try row.requireDate("updated_at")
         )
     }
 
-    private static let columns = "id, space_id, key, name, type, options, position, created_at, updated_at"
-
     public static func getCustomFieldsForSpace(_ db: ZenithDatabase, spaceId: UUID) async throws -> [CustomField] {
-        let rows = try await db.query("""
-            SELECT \(unescaped: columns) FROM custom_fields WHERE space_id = \(spaceId)
-            ORDER BY position ASC, created_at ASC
-            """)
-        var results: [CustomField] = []
-        for try await row in rows { results.append(try map(row)) }
-        return results
+        try await db.read { d in
+            try Row.fetchAll(
+                d, sql: "SELECT * FROM custom_fields WHERE space_id = ? ORDER BY position ASC, created_at ASC",
+                arguments: [spaceId.databaseText]
+            ).map(map)
+        }
     }
 
     public static func getCustomFieldById(_ db: ZenithDatabase, id: UUID) async throws -> CustomField? {
-        let rows = try await db.query("SELECT \(unescaped: columns) FROM custom_fields WHERE id = \(id) LIMIT 1")
-        for try await row in rows { return try map(row) }
-        return nil
+        try await db.read { d in
+            guard let row = try Row.fetchOne(d, sql: "SELECT * FROM custom_fields WHERE id = ? LIMIT 1", arguments: [id.databaseText]) else {
+                return nil
+            }
+            return try map(row)
+        }
     }
 
-    private static func maxPosition(_ db: ZenithDatabase, spaceId: UUID) async throws -> Double? {
-        let rows = try await db.query("SELECT max(position) AS value FROM custom_fields WHERE space_id = \(spaceId)")
-        for try await row in rows { return try row.makeRandomAccess()["value"].decode(Double?.self) }
-        return nil
+    private static func maxPosition(_ d: Database, spaceId: UUID) throws -> Double? {
+        try Double.fetchOne(d, sql: "SELECT max(position) FROM custom_fields WHERE space_id = ?", arguments: [spaceId.databaseText])
     }
 
     public static func createCustomField(
         _ db: ZenithDatabase, spaceId: UUID, key: String, name: String, type: CustomFieldType, options: FieldOptions
     ) async throws -> CustomField {
-        let position = Position.atEnd(try await maxPosition(db, spaceId: spaceId))
-        let optionsJSON = try options.asPostgresJSON()
-        let rows = try await db.query("""
-            INSERT INTO custom_fields (space_id, key, name, type, options, position)
-            VALUES (\(spaceId), \(key), \(name), \(type.rawValue), \(optionsJSON), \(position))
-            RETURNING \(unescaped: columns)
-            """)
-        for try await row in rows { return try map(row) }
-        throw DatabaseError.insertReturnedNoRow
+        try await db.write { d in
+            let position = Position.atEnd(try maxPosition(d, spaceId: spaceId))
+            let id = UUID()
+            let now = Date()
+            try d.execute(
+                sql: """
+                    INSERT INTO custom_fields (id, space_id, key, name, type, options, position, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                arguments: [id.databaseText, spaceId.databaseText, key, name, type.rawValue, try options.jsonText(), position, now, now]
+            )
+            guard let row = try Row.fetchOne(d, sql: "SELECT * FROM custom_fields WHERE id = ?", arguments: [id.databaseText]) else {
+                throw StoreError.insertReturnedNoRow
+            }
+            return try map(row)
+        }
     }
 
     /// Partial update — `name`/`options`/`position` are each independently
     /// optional (rename, option-list grow, or drag-reorder can each happen
-    /// without touching the others), mirroring `updateCustomField`'s
-    /// `Partial<{...}>` input on the TS side.
+    /// without touching the others).
     public static func updateCustomField(
         _ db: ZenithDatabase, id: UUID, name: String?, options: FieldOptions?, position: Double?
     ) async throws -> CustomField? {
-        var update = DynamicUpdate()
-        if let name { try update.set("name", name) }
-        if let options { try update.set("options", try options.asPostgresJSON()) }
-        if let position { try update.set("position", position) }
-
-        let query = try update.buildQuery(table: "custom_fields", whereIdEquals: id, returning: columns)
-        let rows = try await db.query(query)
-        for try await row in rows { return try map(row) }
-        return nil
+        try await db.write { d in
+            var update = DynamicUpdate()
+            if let name { update.set("name", name) }
+            if let options { update.set("options", try options.jsonText()) }
+            if let position { update.set("position", position) }
+            guard let row = try update.execute(d, table: "custom_fields", id: id.databaseText) else { return nil }
+            return try map(row)
+        }
     }
 
     public static func deleteCustomField(_ db: ZenithDatabase, id: UUID) async throws {
-        try await db.execute("DELETE FROM custom_fields WHERE id = \(id)")
+        try await db.write { d in
+            try d.execute(sql: "DELETE FROM custom_fields WHERE id = ?", arguments: [id.databaseText])
+        }
     }
 }

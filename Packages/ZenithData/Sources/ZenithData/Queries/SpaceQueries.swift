@@ -1,48 +1,54 @@
 import Foundation
-import PostgresNIO
+import GRDB
 
-/// Port of `lib/db/queries/spaces.ts`.
+/// Local-store queries for the `spaces` table.
 public enum SpaceQueries {
-    private static func map(_ row: PostgresRow) throws -> Space {
-        let r = row.makeRandomAccess()
-        return Space(
-            id: try r["id"].decode(UUID.self),
-            name: try r["name"].decode(String.self),
-            slug: try r["slug"].decode(String.self),
-            description: try r["description"].decode(String?.self),
-            context: try r["context"].decode(String?.self),
-            createdAt: try r["created_at"].decode(Date.self),
-            updatedAt: try r["updated_at"].decode(Date.self)
+    private static func map(_ row: Row) throws -> Space {
+        Space(
+            id: try row.requireUUID("id"),
+            name: try row.requireString("name"),
+            slug: try row.requireString("slug"),
+            description: row.optionalString("description"),
+            context: row.optionalString("context"),
+            createdAt: try row.requireDate("created_at"),
+            updatedAt: try row.requireDate("updated_at")
         )
     }
 
-    private static let columns = "id, name, slug, description, context, created_at, updated_at"
-
     public static func getSpaces(_ db: ZenithDatabase) async throws -> [Space] {
-        let rows = try await db.query("SELECT \(unescaped: columns) FROM spaces ORDER BY name ASC")
-        var results: [Space] = []
-        for try await row in rows { results.append(try map(row)) }
-        return results
+        try await db.read { d in
+            try Row.fetchAll(d, sql: "SELECT * FROM spaces ORDER BY name ASC").map(map)
+        }
     }
 
     public static func getSpaceBySlug(_ db: ZenithDatabase, slug: String) async throws -> Space? {
-        let rows = try await db.query("SELECT \(unescaped: columns) FROM spaces WHERE slug = \(slug) LIMIT 1")
-        for try await row in rows { return try map(row) }
-        return nil
+        try await db.read { d in
+            try getSpaceBySlug(d, slug: slug)
+        }
+    }
+
+    private static func getSpaceBySlug(_ d: Database, slug: String) throws -> Space? {
+        guard let row = try Row.fetchOne(d, sql: "SELECT * FROM spaces WHERE slug = ? LIMIT 1", arguments: [slug]) else {
+            return nil
+        }
+        return try map(row)
     }
 
     public static func getSpaceById(_ db: ZenithDatabase, id: UUID) async throws -> Space? {
-        let rows = try await db.query("SELECT \(unescaped: columns) FROM spaces WHERE id = \(id) LIMIT 1")
-        for try await row in rows { return try map(row) }
-        return nil
+        try await db.read { d in
+            guard let row = try Row.fetchOne(d, sql: "SELECT * FROM spaces WHERE id = ? LIMIT 1", arguments: [id.databaseText]) else {
+                return nil
+            }
+            return try map(row)
+        }
     }
 
     /// Generates a unique slug from a name, appending -2, -3, ... on collision.
-    private static func generateUniqueSlug(_ db: ZenithDatabase, name: String) async throws -> String {
+    private static func generateUniqueSlug(_ d: Database, name: String) throws -> String {
         let base = Slug.slugify(name).isEmpty ? "space" : Slug.slugify(name)
         var candidate = base
         var suffix = 2
-        while try await getSpaceBySlug(db, slug: candidate) != nil {
+        while try getSpaceBySlug(d, slug: candidate) != nil {
             candidate = "\(base)-\(suffix)"
             suffix += 1
         }
@@ -50,70 +56,56 @@ public enum SpaceQueries {
     }
 
     public static func createSpace(_ db: ZenithDatabase, name: String, description: String?) async throws -> Space {
-        let slug = try await generateUniqueSlug(db, name: name)
-        let rows = try await db.query("""
-            INSERT INTO spaces (name, description, slug) VALUES (\(name), \(description), \(slug))
-            RETURNING \(unescaped: columns)
-            """)
-        for try await row in rows { return try map(row) }
-        throw DatabaseError.insertReturnedNoRow
+        try await db.write { d in
+            let slug = try generateUniqueSlug(d, name: name)
+            let id = UUID()
+            let now = Date()
+            try d.execute(
+                sql: """
+                    INSERT INTO spaces (id, name, slug, description, context, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, NULL, ?, ?)
+                    """,
+                arguments: [id.databaseText, name, slug, description, now, now]
+            )
+            guard let row = try Row.fetchOne(d, sql: "SELECT * FROM spaces WHERE id = ?", arguments: [id.databaseText]) else {
+                throw StoreError.insertReturnedNoRow
+            }
+            return try map(row)
+        }
     }
 
-    /// Backs the space settings form (`updateSpaceAction`). `description ==
-    /// nil` means "leave unchanged" — mirrors the TS side's behavior
-    /// exactly: `spaceInputSchema`'s `description` is `.optional()`, and an
-    /// empty form field maps to `undefined` before it ever reaches
-    /// `updateSpace`, which Drizzle's `.set()` treats as "don't touch this
-    /// column" (not "clear it") when a key is `undefined`. There is no way
-    /// to explicitly clear a space's description through this path — that
-    /// limitation is real on the TS side too, not lost in translation.
+    /// Backs the space settings form. `description == nil` means "leave
+    /// unchanged" — an empty form field is normalized to `nil` before it
+    /// ever reaches this function, matching the app's existing convention;
+    /// there's no way to explicitly clear a space's description through
+    /// this path.
     public static func updateNameAndDescription(
         _ db: ZenithDatabase, id: UUID, name: String, description: String?
     ) async throws -> Space? {
-        let rows: PostgresRowSequence
-        if let description {
-            rows = try await db.query("""
-                UPDATE spaces SET name = \(name), description = \(description), updated_at = now()
-                WHERE id = \(id) RETURNING \(unescaped: columns)
-                """)
-        } else {
-            rows = try await db.query("""
-                UPDATE spaces SET name = \(name), updated_at = now()
-                WHERE id = \(id) RETURNING \(unescaped: columns)
-                """)
+        try await db.write { d in
+            var update = DynamicUpdate()
+            update.set("name", name)
+            if let description { update.set("description", description) }
+            guard let row = try update.execute(d, table: "spaces", id: id.databaseText) else { return nil }
+            return try map(row)
         }
-        for try await row in rows { return try map(row) }
-        return nil
     }
 
-    /// Backs the Settings "context" textarea autosave
-    /// (`updateSpaceContextAction`). Unlike `description` above, `context`
-    /// explicitly supports clearing: `nil` here sets the column to `NULL`
-    /// (the TS side passes `context.trim() || null`, never `undefined`).
+    /// Backs the Settings "context" textarea autosave. Unlike `description`
+    /// above, `context` explicitly supports clearing: `nil` here sets the
+    /// column to `NULL`.
     public static func updateContext(_ db: ZenithDatabase, id: UUID, context: String?) async throws -> Space? {
-        let rows = try await db.query("""
-            UPDATE spaces SET context = \(context), updated_at = now()
-            WHERE id = \(id) RETURNING \(unescaped: columns)
-            """)
-        for try await row in rows { return try map(row) }
-        return nil
+        try await db.write { d in
+            var update = DynamicUpdate()
+            if let context { update.set("context", context) } else { update.setNull("context") }
+            guard let row = try update.execute(d, table: "spaces", id: id.databaseText) else { return nil }
+            return try map(row)
+        }
     }
 
     public static func deleteSpace(_ db: ZenithDatabase, id: UUID) async throws {
-        try await db.execute("DELETE FROM spaces WHERE id = \(id)")
-    }
-}
-
-public enum DatabaseError: Error, CustomStringConvertible {
-    case insertReturnedNoRow
-    case notFound
-    case invalidEnumValue(String, typeName: String)
-
-    public var description: String {
-        switch self {
-        case .insertReturnedNoRow: return "Insert didn't return the new row."
-        case .notFound: return "Record not found."
-        case .invalidEnumValue(let raw, let typeName): return "\"\(raw)\" isn't a valid \(typeName)."
+        try await db.write { d in
+            try d.execute(sql: "DELETE FROM spaces WHERE id = ?", arguments: [id.databaseText])
         }
     }
 }

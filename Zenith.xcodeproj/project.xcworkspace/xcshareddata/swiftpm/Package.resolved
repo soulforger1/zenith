@@ -1,6 +1,15 @@
 {
-  "originHash" : "68b2db1bd24c3c0469ae4570dcb226a4fa9010b299e9d36cc120c63a8717638f",
+  "originHash" : "2bba6905d5d4cda0b8fa5bddd759dbc93f193b27856138f607a1bbc53c832d90",
   "pins" : [
+    {
+      "identity" : "grdb.swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/groue/GRDB.swift.git",
+      "state" : {
+        "revision" : "b83108d10f42680d78f23fe4d4d80fc88dab3212",
+        "version" : "7.11.1"
+      }
+    },
     {
       "identity" : "postgres-nio",
       "kind" : "remoteSourceControl",

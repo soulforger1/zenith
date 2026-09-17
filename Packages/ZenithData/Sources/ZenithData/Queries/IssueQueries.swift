@@ -1,114 +1,111 @@
 import Foundation
-import PostgresNIO
+import GRDB
 
-/// Port of `lib/db/queries/issues.ts`.
+/// Local-store queries for the `issues` table.
 public enum IssueQueries {
-    // `due_date`/`start_date` are Postgres `date` columns — casting to
-    // `::text` here is required, not cosmetic: without it, PostgresNIO's
-    // generic `String` decoder reads the column's raw binary `date`
-    // representation (a 4-byte day-offset integer) as if it were UTF-8
-    // text, producing garbage characters instead of throwing a decode
-    // error. Casting to `text` in SQL makes Postgres send an actual
-    // "YYYY-MM-DD" string over the wire, which decodes correctly.
-    private static let columns = """
-        id, space_id, milestone_id, parent_id, title, description, status, is_closed, priority, \
-        tags, branch, estimate, due_date::text AS due_date, start_date::text AS start_date, \
-        custom_field_values, position, closed_at, created_at, updated_at
-        """
-
-    private static func map(_ row: PostgresRow) throws -> Issue {
-        let r = row.makeRandomAccess()
-        return Issue(
-            id: try r["id"].decode(UUID.self),
-            spaceId: try r["space_id"].decode(UUID.self),
-            milestoneId: try r["milestone_id"].decode(UUID?.self),
-            parentId: try r["parent_id"].decode(UUID?.self),
-            title: try r["title"].decode(String.self),
-            description: try r["description"].decode(String?.self),
-            status: try r["status"].decodeEnum(IssueStatus.self),
-            isClosed: try r["is_closed"].decode(Bool.self),
-            priority: try r["priority"].decodeEnum(IssuePriority.self),
-            tags: try r["tags"].decode([String].self),
-            branch: try r["branch"].decode(String?.self),
-            estimate: try r["estimate"].decode(String?.self),
-            dueDate: try r["due_date"].decode(String?.self),
-            startDate: try r["start_date"].decode(String?.self),
-            customFieldValues: try r["custom_field_values"].decode([String: AnyCodableValue].self),
-            position: try r["position"].decode(Double.self),
-            closedAt: try r["closed_at"].decode(Date?.self),
-            createdAt: try r["created_at"].decode(Date.self),
-            updatedAt: try r["updated_at"].decode(Date.self)
+    private static func map(_ row: Row) throws -> Issue {
+        Issue(
+            id: try row.requireUUID("id"),
+            spaceId: try row.requireUUID("space_id"),
+            milestoneId: try row.optionalUUID("milestone_id"),
+            parentId: try row.optionalUUID("parent_id"),
+            title: try row.requireString("title"),
+            description: row.optionalString("description"),
+            status: try row.requireEnum("status", IssueStatus.self),
+            isClosed: row.requireBool("is_closed"),
+            priority: try row.requireEnum("priority", IssuePriority.self),
+            tags: try row.jsonStringArray("tags"),
+            branch: row.optionalString("branch"),
+            estimate: row.optionalString("estimate"),
+            dueDate: row.optionalString("due_date"),
+            startDate: row.optionalString("start_date"),
+            customFieldValues: try row.jsonMap("custom_field_values"),
+            position: try row.requireDouble("position"),
+            closedAt: row.optionalDate("closed_at"),
+            createdAt: try row.requireDate("created_at"),
+            updatedAt: try row.requireDate("updated_at")
         )
+    }
+
+    private static func placeholders(_ count: Int) -> String {
+        Array(repeating: "?", count: count).joined(separator: ", ")
     }
 
     // MARK: - Reads
 
     public static func getIssuesForSpace(_ db: ZenithDatabase, spaceId: UUID) async throws -> [Issue] {
-        let rows = try await db.query("""
-            SELECT \(unescaped: columns) FROM issues WHERE space_id = \(spaceId)
-            ORDER BY status ASC, position ASC, created_at DESC
-            """)
-        var results: [Issue] = []
-        for try await row in rows { results.append(try map(row)) }
-        return results
+        try await db.read { d in
+            try Row.fetchAll(
+                d, sql: "SELECT * FROM issues WHERE space_id = ? ORDER BY status ASC, position ASC, created_at DESC",
+                arguments: [spaceId.databaseText]
+            ).map(map)
+        }
     }
 
     public static func getIssuesForMilestone(_ db: ZenithDatabase, milestoneId: UUID) async throws -> [Issue] {
-        let rows = try await db.query("""
-            SELECT \(unescaped: columns) FROM issues WHERE milestone_id = \(milestoneId)
-            ORDER BY status ASC, position ASC
-            """)
-        var results: [Issue] = []
-        for try await row in rows { results.append(try map(row)) }
-        return results
+        try await db.read { d in
+            try Row.fetchAll(
+                d, sql: "SELECT * FROM issues WHERE milestone_id = ? ORDER BY status ASC, position ASC",
+                arguments: [milestoneId.databaseText]
+            ).map(map)
+        }
     }
 
     public static func getIssueById(_ db: ZenithDatabase, id: UUID) async throws -> Issue? {
-        let rows = try await db.query("SELECT \(unescaped: columns) FROM issues WHERE id = \(id) LIMIT 1")
-        for try await row in rows { return try map(row) }
-        return nil
+        try await db.read { d in
+            guard let row = try Row.fetchOne(d, sql: "SELECT * FROM issues WHERE id = ? LIMIT 1", arguments: [id.databaseText]) else {
+                return nil
+            }
+            return try map(row)
+        }
     }
 
     /// Repo ids linked to each of `issueIds`, batched into one query.
     public static func repoIds(_ db: ZenithDatabase, forIssueIds issueIds: [UUID]) async throws -> [UUID: [UUID]] {
-        var map: [UUID: [UUID]] = [:]
-        guard !issueIds.isEmpty else { return map }
-        let rows = try await db.query("SELECT issue_id, repo_id FROM issue_repos WHERE issue_id = ANY(\(issueIds))")
-        for try await row in rows {
-            let r = row.makeRandomAccess()
-            let issueId = try r["issue_id"].decode(UUID.self)
-            let repoId = try r["repo_id"].decode(UUID.self)
-            map[issueId, default: []].append(repoId)
+        guard !issueIds.isEmpty else { return [:] }
+        return try await db.read { d in
+            let rows = try Row.fetchAll(
+                d, sql: "SELECT issue_id, repo_id FROM issue_repos WHERE issue_id IN (\(placeholders(issueIds.count)))",
+                arguments: StatementArguments(issueIds.map { $0.databaseText })
+            )
+            var map: [UUID: [UUID]] = [:]
+            for row in rows {
+                let issueId = try row.requireUUID("issue_id")
+                let repoId = try row.requireUUID("repo_id")
+                map[issueId, default: []].append(repoId)
+            }
+            return map
         }
-        return map
     }
 
     /// `{total, done}` per parent, for every id in `parentIds`, in one query.
     public static func subtaskCounts(_ db: ZenithDatabase, forParentIds parentIds: [UUID]) async throws -> [UUID: SubtaskCount] {
-        var map: [UUID: SubtaskCount] = [:]
-        guard !parentIds.isEmpty else { return map }
-        let rows = try await db.query("SELECT parent_id, is_closed FROM issues WHERE parent_id = ANY(\(parentIds))")
-        for try await row in rows {
-            let r = row.makeRandomAccess()
-            guard let parentId = try r["parent_id"].decode(UUID?.self) else { continue }
-            let isClosed = try r["is_closed"].decode(Bool.self)
-            var entry = map[parentId] ?? .zero
-            entry.total += 1
-            if isClosed { entry.done += 1 }
-            map[parentId] = entry
+        guard !parentIds.isEmpty else { return [:] }
+        return try await db.read { d in
+            let rows = try Row.fetchAll(
+                d, sql: "SELECT parent_id, is_closed FROM issues WHERE parent_id IN (\(placeholders(parentIds.count)))",
+                arguments: StatementArguments(parentIds.map { $0.databaseText })
+            )
+            var map: [UUID: SubtaskCount] = [:]
+            for row in rows {
+                guard let parentId = try row.optionalUUID("parent_id") else { continue }
+                var entry = map[parentId] ?? .zero
+                entry.total += 1
+                if row.requireBool("is_closed") { entry.done += 1 }
+                map[parentId] = entry
+            }
+            return map
         }
-        return map
     }
 
     /// A task's immediate children, for rendering the drawer's subtask list.
     public static func getChildIssues(_ db: ZenithDatabase, parentId: UUID) async throws -> [Issue] {
-        let rows = try await db.query("""
-            SELECT \(unescaped: columns) FROM issues WHERE parent_id = \(parentId)
-            ORDER BY position ASC, created_at ASC
-            """)
-        var results: [Issue] = []
-        for try await row in rows { results.append(try map(row)) }
-        return results
+        try await db.read { d in
+            try Row.fetchAll(
+                d, sql: "SELECT * FROM issues WHERE parent_id = ? ORDER BY position ASC, created_at ASC",
+                arguments: [parentId.databaseText]
+            ).map(map)
+        }
     }
 
     /// True if setting `candidateParentId` as `taskId`'s parent would create
@@ -134,39 +131,43 @@ public enum IssueQueries {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
         let pattern = "%\(trimmed)%"
-        let rows: PostgresRowSequence
-        if excludeIds.isEmpty {
-            rows = try await db.query("""
-                SELECT id, title FROM issues WHERE space_id = \(spaceId) AND title ILIKE \(pattern)
-                ORDER BY title ASC LIMIT 20
-                """)
-        } else {
-            rows = try await db.query("""
-                SELECT id, title FROM issues WHERE space_id = \(spaceId) AND title ILIKE \(pattern)
-                AND NOT (id = ANY(\(excludeIds))) ORDER BY title ASC LIMIT 20
-                """)
+        return try await db.read { d in
+            let rows: [Row]
+            if excludeIds.isEmpty {
+                rows = try Row.fetchAll(
+                    d, sql: "SELECT id, title FROM issues WHERE space_id = ? AND title LIKE ? ORDER BY title ASC LIMIT 20",
+                    arguments: [spaceId.databaseText, pattern]
+                )
+            } else {
+                var arguments: [(any DatabaseValueConvertible)?] = [spaceId.databaseText, pattern]
+                arguments.append(contentsOf: excludeIds.map { $0.databaseText })
+                rows = try Row.fetchAll(
+                    d, sql: """
+                        SELECT id, title FROM issues WHERE space_id = ? AND title LIKE ?
+                        AND id NOT IN (\(placeholders(excludeIds.count))) ORDER BY title ASC LIMIT 20
+                        """,
+                    arguments: StatementArguments(arguments)
+                )
+            }
+            return try rows.map { (id: try $0.requireUUID("id"), title: try $0.requireString("title")) }
         }
-        var results: [(id: UUID, title: String)] = []
-        for try await row in rows {
-            let r = row.makeRandomAccess()
-            results.append((id: try r["id"].decode(UUID.self), title: try r["title"].decode(String.self)))
-        }
-        return results
     }
 
     /// Highest `position` per status column in a space.
     public static func maxPositionsBySpace(_ db: ZenithDatabase, spaceId: UUID) async throws -> [IssueStatus: Double] {
-        let rows = try await db.query("""
-            SELECT status, max(position) AS value FROM issues WHERE space_id = \(spaceId) GROUP BY status
-            """)
-        var map: [IssueStatus: Double] = [:]
-        for try await row in rows {
-            let r = row.makeRandomAccess()
-            if let status = try r["status"].decodeEnum(IssueStatus?.self), let value = try r["value"].decode(Double?.self) {
-                map[status] = value
+        try await db.read { d in
+            let rows = try Row.fetchAll(
+                d, sql: "SELECT status, max(position) AS value FROM issues WHERE space_id = ? GROUP BY status",
+                arguments: [spaceId.databaseText]
+            )
+            var map: [IssueStatus: Double] = [:]
+            for row in rows {
+                if let status = try row.optionalEnum("status", IssueStatus.self), let value = row["value"] as Double? {
+                    map[status] = value
+                }
             }
+            return map
         }
-        return map
     }
 
     public struct MilestoneProgress: Sendable, Equatable {
@@ -181,18 +182,18 @@ public enum IssueQueries {
 
     /// Progress counts for every milestone in a space, in one query.
     public static func milestoneProgress(_ db: ZenithDatabase, spaceId: UUID) async throws -> [UUID: MilestoneProgress] {
-        let rows = try await db.query("SELECT milestone_id, is_closed FROM issues WHERE space_id = \(spaceId)")
-        var map: [UUID: MilestoneProgress] = [:]
-        for try await row in rows {
-            let r = row.makeRandomAccess()
-            guard let milestoneId = try r["milestone_id"].decode(UUID?.self) else { continue }
-            let isClosed = try r["is_closed"].decode(Bool.self)
-            var entry = map[milestoneId] ?? MilestoneProgress(total: 0, closed: 0)
-            entry.total += 1
-            if isClosed { entry.closed += 1 }
-            map[milestoneId] = entry
+        try await db.read { d in
+            let rows = try Row.fetchAll(d, sql: "SELECT milestone_id, is_closed FROM issues WHERE space_id = ?", arguments: [spaceId.databaseText])
+            var map: [UUID: MilestoneProgress] = [:]
+            for row in rows {
+                guard let milestoneId = try row.optionalUUID("milestone_id") else { continue }
+                var entry = map[milestoneId] ?? MilestoneProgress(total: 0, closed: 0)
+                entry.total += 1
+                if row.requireBool("is_closed") { entry.closed += 1 }
+                map[milestoneId] = entry
+            }
+            return map
         }
-        return map
     }
 
     public struct SpaceIssueCounts: Sendable, Equatable {
@@ -207,25 +208,26 @@ public enum IssueQueries {
 
     /// Open/total issue counts for every space, in one query.
     public static func issueCountsBySpace(_ db: ZenithDatabase) async throws -> [UUID: SpaceIssueCounts] {
-        let rows = try await db.query("SELECT space_id, is_closed FROM issues")
-        var map: [UUID: SpaceIssueCounts] = [:]
-        for try await row in rows {
-            let r = row.makeRandomAccess()
-            let spaceId = try r["space_id"].decode(UUID.self)
-            let isClosed = try r["is_closed"].decode(Bool.self)
-            var entry = map[spaceId] ?? SpaceIssueCounts(total: 0, open: 0)
-            entry.total += 1
-            if !isClosed { entry.open += 1 }
-            map[spaceId] = entry
+        try await db.read { d in
+            let rows = try Row.fetchAll(d, sql: "SELECT space_id, is_closed FROM issues")
+            var map: [UUID: SpaceIssueCounts] = [:]
+            for row in rows {
+                let spaceId = try row.requireUUID("space_id")
+                var entry = map[spaceId] ?? SpaceIssueCounts(total: 0, open: 0)
+                entry.total += 1
+                if !row.requireBool("is_closed") { entry.open += 1 }
+                map[spaceId] = entry
+            }
+            return map
         }
-        return map
     }
 
     public static func unassignedIssueCount(_ db: ZenithDatabase, spaceId: UUID) async throws -> Int {
-        let rows = try await db.query("SELECT id FROM issues WHERE space_id = \(spaceId) AND milestone_id IS NULL")
-        var count = 0
-        for try await _ in rows { count += 1 }
-        return count
+        try await db.read { d in
+            try Int.fetchOne(
+                d, sql: "SELECT COUNT(*) FROM issues WHERE space_id = ? AND milestone_id IS NULL", arguments: [spaceId.databaseText]
+            ) ?? 0
+        }
     }
 
     public struct UpcomingIssue: Sendable, Identifiable, Equatable {
@@ -240,40 +242,34 @@ public enum IssueQueries {
 
     /// Cross-space "due soon" feed for the spaces home page's "Upcoming"
     /// widget — overdue tasks and tasks due within `daysAhead`, done tasks
-    /// excluded.
+    /// excluded. `due_date` is plain `"YYYY-MM-DD"` text now, so the cutoff
+    /// is computed the same way (`ISODate`, local-timezone midnight) and
+    /// compared lexically — no more Postgres date/text cast juggling.
     public static func upcomingIssues(_ db: ZenithDatabase, daysAhead: Int) async throws -> [UpcomingIssue] {
-        let cutoffDate = Calendar(identifier: .gregorian).date(byAdding: .day, value: daysAhead, to: Date()) ?? Date()
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = TimeZone(identifier: "UTC")
-        let cutoffString = formatter.string(from: cutoffDate)
-
-        // `due_date` is a Postgres `date` column; PostgresNIO binds a
-        // Swift `String` parameter as `text`, and Postgres won't coerce a
-        // `text`-typed parameter to `date` in any context — comparison
-        // (`date <= text`) or assignment (`SET due_date = $1`) alike. Every
-        // `due_date` read casts the column with `::text`, every write casts
-        // the parameter with `::date`.
-        let rows = try await db.query("""
-            SELECT i.id, i.title, i.priority, i.status, i.due_date::text AS due_date, s.name AS space_name, s.slug AS space_slug
-            FROM issues i INNER JOIN spaces s ON i.space_id = s.id
-            WHERE i.due_date IS NOT NULL AND i.due_date <= \(cutoffString)::date AND i.status != 'done'
-            ORDER BY i.due_date ASC LIMIT 20
-            """)
-        var results: [UpcomingIssue] = []
-        for try await row in rows {
-            let r = row.makeRandomAccess()
-            results.append(UpcomingIssue(
-                id: try r["id"].decode(UUID.self),
-                title: try r["title"].decode(String.self),
-                priority: try r["priority"].decodeEnum(IssuePriority.self),
-                status: try r["status"].decodeEnum(IssueStatus.self),
-                dueDate: try r["due_date"].decode(String?.self),
-                spaceName: try r["space_name"].decode(String.self),
-                spaceSlug: try r["space_slug"].decode(String.self)
-            ))
+        let cutoff = ISODate.addDays(ISODate.today(), daysAhead)
+        return try await db.read { d in
+            let rows = try Row.fetchAll(
+                d, sql: """
+                    SELECT i.id AS id, i.title AS title, i.priority AS priority, i.status AS status,
+                           i.due_date AS due_date, s.name AS space_name, s.slug AS space_slug
+                    FROM issues i INNER JOIN spaces s ON i.space_id = s.id
+                    WHERE i.due_date IS NOT NULL AND i.due_date <= ? AND i.status != 'done'
+                    ORDER BY i.due_date ASC LIMIT 20
+                    """,
+                arguments: [cutoff]
+            )
+            return try rows.map { row in
+                UpcomingIssue(
+                    id: try row.requireUUID("id"),
+                    title: try row.requireString("title"),
+                    priority: try row.requireEnum("priority", IssuePriority.self),
+                    status: try row.requireEnum("status", IssueStatus.self),
+                    dueDate: row.optionalString("due_date"),
+                    spaceName: try row.requireString("space_name"),
+                    spaceSlug: try row.requireString("space_slug")
+                )
+            }
         }
-        return results
     }
 
     // MARK: - Writes
@@ -318,139 +314,157 @@ public enum IssueQueries {
         }
     }
 
-    public static func createIssue(_ db: ZenithDatabase, _ input: NewIssueInput) async throws -> Issue {
-        let rows = try await db.query("SELECT max(position) AS value FROM issues WHERE space_id = \(input.spaceId) AND status = \(input.status.rawValue)")
-        var maxPosition: Double?
-        for try await row in rows { maxPosition = try row.makeRandomAccess()["value"].decode(Double?.self) }
-        let position = Position.atEnd(maxPosition)
-        let isClosed = input.status == .done
-        let closedAt: Date? = isClosed ? Date() : nil
-
-        let insertRows = try await db.query("""
-            INSERT INTO issues (
-                space_id, title, description, status, is_closed, closed_at, priority, tags, branch,
-                estimate, parent_id, milestone_id, due_date, start_date, custom_field_values, position
-            ) VALUES (
-                \(input.spaceId), \(input.title), \(input.description), \(input.status.rawValue), \(isClosed),
-                \(closedAt), \(input.priority.rawValue), \(input.tags), \(input.branch), \(input.estimate),
-                \(input.parentId), \(input.milestoneId), \(input.dueDate)::date, \(input.startDate)::date,
-                \(input.customFieldValues), \(position)
-            ) RETURNING \(unescaped: columns)
-            """)
-        var created: Issue?
-        for try await row in insertRows { created = try map(row) }
-        guard let created else { throw DatabaseError.insertReturnedNoRow }
-
-        if !input.repoIds.isEmpty {
-            try await linkRepos(db, issueId: created.id, repoIds: input.repoIds)
+    /// Links `repoIds` to `issueId` — runs inside the caller's write
+    /// transaction (a plain `Database`, not a `ZenithDatabase`).
+    private static func linkRepos(_ d: Database, issueId: UUID, repoIds: [UUID]) throws {
+        guard !repoIds.isEmpty else { return }
+        let now = Date()
+        for repoId in repoIds {
+            try d.execute(
+                sql: "INSERT INTO issue_repos (id, issue_id, repo_id, updated_at) VALUES (?, ?, ?, ?)",
+                arguments: [UUID().databaseText, issueId.databaseText, repoId.databaseText, now]
+            )
         }
-        return created
     }
 
-    /// Bulk "paste a list" flow: creates many backlog issues in one insert,
-    /// positions threaded forward in memory so the list lands in the order
-    /// it was reviewed in, appended after whatever's already at the end of
-    /// the backlog.
+    public static func createIssue(_ db: ZenithDatabase, _ input: NewIssueInput) async throws -> Issue {
+        try await db.write { d in
+            let maxPosition = try Double.fetchOne(
+                d, sql: "SELECT max(position) FROM issues WHERE space_id = ? AND status = ?",
+                arguments: [input.spaceId.databaseText, input.status.rawValue]
+            )
+            let position = Position.atEnd(maxPosition)
+            let isClosed = input.status == .done
+            let now = Date()
+            let id = UUID()
+
+            try d.execute(
+                sql: """
+                    INSERT INTO issues (
+                        id, space_id, title, description, status, is_closed, closed_at, priority, tags, branch,
+                        estimate, parent_id, milestone_id, due_date, start_date, custom_field_values, position,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                arguments: [
+                    id.databaseText, input.spaceId.databaseText, input.title, input.description, input.status.rawValue,
+                    isClosed, isClosed ? now : nil, input.priority.rawValue, try JSONColumn.encodeStringArray(input.tags),
+                    input.branch, input.estimate, input.parentId?.databaseText, input.milestoneId?.databaseText,
+                    input.dueDate, input.startDate, try JSONColumn.encodeMap(input.customFieldValues), position, now, now,
+                ]
+            )
+            guard let row = try Row.fetchOne(d, sql: "SELECT * FROM issues WHERE id = ?", arguments: [id.databaseText]) else {
+                throw StoreError.insertReturnedNoRow
+            }
+            let created = try map(row)
+
+            if !input.repoIds.isEmpty {
+                try linkRepos(d, issueId: created.id, repoIds: input.repoIds)
+            }
+            return created
+        }
+    }
+
+    /// Bulk "paste a list" flow: creates many backlog issues in one write
+    /// transaction, positions threaded forward in memory so the list lands
+    /// in the order it was reviewed in, appended after whatever's already
+    /// at the end of the backlog.
     public static func createIssues(_ db: ZenithDatabase, spaceId: UUID, drafts: [NewIssueInput]) async throws -> [Issue] {
         guard !drafts.isEmpty else { return [] }
-
-        let rows = try await db.query("SELECT max(position) AS value FROM issues WHERE space_id = \(spaceId) AND status = 'backlog'")
-        var position: Double?
-        for try await row in rows { position = try row.makeRandomAccess()["value"].decode(Double?.self) }
-
-        var created: [Issue] = []
-        for draft in drafts {
-            position = Position.atEnd(position)
-            let insertRows = try await db.query("""
-                INSERT INTO issues (
-                    space_id, title, description, status, is_closed, priority, tags, branch,
-                    estimate, parent_id, milestone_id, due_date, custom_field_values, position
-                ) VALUES (
-                    \(spaceId), \(draft.title), \(draft.description), 'backlog', false, \(draft.priority.rawValue),
-                    \(draft.tags), \(draft.branch), \(draft.estimate), \(draft.parentId), \(draft.milestoneId),
-                    \(draft.dueDate)::date, \(draft.customFieldValues), \(position!)
-                ) RETURNING \(unescaped: columns)
-                """)
-            for try await row in insertRows {
+        return try await db.write { d in
+            var position = try Double.fetchOne(
+                d, sql: "SELECT max(position) FROM issues WHERE space_id = ? AND status = 'backlog'", arguments: [spaceId.databaseText]
+            )
+            var created: [Issue] = []
+            for draft in drafts {
+                position = Position.atEnd(position)
+                let id = UUID()
+                let now = Date()
+                try d.execute(
+                    sql: """
+                        INSERT INTO issues (
+                            id, space_id, title, description, status, is_closed, priority, tags, branch,
+                            estimate, parent_id, milestone_id, due_date, custom_field_values, position,
+                            created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, 'backlog', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                    arguments: [
+                        id.databaseText, spaceId.databaseText, draft.title, draft.description, draft.priority.rawValue,
+                        try JSONColumn.encodeStringArray(draft.tags), draft.branch, draft.estimate,
+                        draft.parentId?.databaseText, draft.milestoneId?.databaseText, draft.dueDate,
+                        try JSONColumn.encodeMap(draft.customFieldValues), position!, now, now,
+                    ]
+                )
+                guard let row = try Row.fetchOne(d, sql: "SELECT * FROM issues WHERE id = ?", arguments: [id.databaseText]) else {
+                    throw StoreError.insertReturnedNoRow
+                }
                 let issue = try map(row)
                 created.append(issue)
-                if !draft.repoIds.isEmpty { try await linkRepos(db, issueId: issue.id, repoIds: draft.repoIds) }
+                if !draft.repoIds.isEmpty { try linkRepos(d, issueId: issue.id, repoIds: draft.repoIds) }
             }
-        }
-        return created
-    }
-
-    private static func linkRepos(_ db: ZenithDatabase, issueId: UUID, repoIds: [UUID]) async throws {
-        guard !repoIds.isEmpty else { return }
-        for repoId in repoIds {
-            try await db.execute("INSERT INTO issue_repos (issue_id, repo_id) VALUES (\(issueId), \(repoId))")
+            return created
         }
     }
 
     /// Generic per-field autosave. Keeps `isClosed`/`closedAt` in sync
     /// whenever `status` is part of the patch — there's no separate close/
     /// reopen action, "done" status is the source of truth.
-    /// `customFieldValues`, if present, is merged into the existing jsonb
-    /// via Postgres's `||` object-concat operator rather than overwriting.
-    /// Wrapped in a transaction alongside the repo-link full-replace, same
-    /// as the TS side's `db.transaction(...)`.
+    /// `customFieldValues`, if present, is merged into the existing map
+    /// (Swift-side read-modify-write, in the same write transaction)
+    /// rather than overwriting. Wrapped in a single `db.write { }`, which
+    /// is itself a transaction, alongside the repo-link full-replace.
+    /// `updated_at` is always bumped, even for a repo-only patch — the
+    /// sync layer (Phase 2+) relies on every local write touching it.
     public static func updateIssueFields(_ db: ZenithDatabase, id: UUID, patch: IssueFieldPatch) async throws -> Issue? {
-        try await db.withTransaction { connection in
+        try await db.write { d in
             var update = DynamicUpdate()
 
-            if let title = patch.title { try update.set("title", title) }
+            if let title = patch.title { update.set("title", title) }
             if case .some(let description) = patch.description {
-                if let description { try update.set("description", description) } else { update.setNull("description") }
+                if let description { update.set("description", description) } else { update.setNull("description") }
             }
             if let status = patch.status {
-                try update.set("status", status.rawValue)
-                try update.set("is_closed", status == .done)
-                if status == .done { try update.set("closed_at", Date()) } else { update.setNull("closed_at") }
+                update.set("status", status.rawValue)
+                update.set("is_closed", status == .done)
+                if status == .done { update.set("closed_at", Date()) } else { update.setNull("closed_at") }
             }
-            if let priority = patch.priority { try update.set("priority", priority.rawValue) }
-            if let tags = patch.tags { try update.set("tags", tags) }
+            if let priority = patch.priority { update.set("priority", priority.rawValue) }
+            if let tags = patch.tags { update.set("tags", try JSONColumn.encodeStringArray(tags)) }
             if case .some(let branch) = patch.branch {
-                if let branch { try update.set("branch", branch) } else { update.setNull("branch") }
+                if let branch { update.set("branch", branch) } else { update.setNull("branch") }
             }
             if case .some(let estimate) = patch.estimate {
-                if let estimate { try update.set("estimate", estimate) } else { update.setNull("estimate") }
+                if let estimate { update.set("estimate", estimate) } else { update.setNull("estimate") }
             }
             if case .some(let parentId) = patch.parentId {
-                if let parentId { try update.set("parent_id", parentId) } else { update.setNull("parent_id") }
+                if let parentId { update.set("parent_id", parentId.databaseText) } else { update.setNull("parent_id") }
             }
             if case .some(let milestoneId) = patch.milestoneId {
-                if let milestoneId { try update.set("milestone_id", milestoneId) } else { update.setNull("milestone_id") }
+                if let milestoneId { update.set("milestone_id", milestoneId.databaseText) } else { update.setNull("milestone_id") }
             }
-            // `due_date`/`start_date` are Postgres `date` columns and
-            // PostgresNIO binds a Swift `String` parameter as `text`.
-            // Postgres will not coerce a `text`-typed parameter to `date`
-            // even in an assignment context (only a truly *unknown* literal
-            // gets that treatment), so the `::date` cast is required — its
-            // absence is what raised `42804: column "due_date" is of type
-            // date but expression is of type text`.
+            // `due_date`/`start_date` are plain TEXT now — no Postgres
+            // `::date` cast needed (that whole bug class, commits
+            // `61561a6`/`abd5047`, is gone with the move off Postgres).
             if case .some(let dueDate) = patch.dueDate {
-                if let dueDate { try update.set("due_date", raw: "$1::date", binding: dueDate) } else { update.setNull("due_date") }
+                if let dueDate { update.set("due_date", dueDate) } else { update.setNull("due_date") }
             }
             if case .some(let startDate) = patch.startDate {
-                if let startDate { try update.set("start_date", raw: "$1::date", binding: startDate) } else { update.setNull("start_date") }
+                if let startDate { update.set("start_date", startDate) } else { update.setNull("start_date") }
             }
-            if let position = patch.position { try update.set("position", position) }
-            if let customFieldValues = patch.customFieldValues {
-                try update.set("custom_field_values", raw: "custom_field_values || $1::jsonb", binding: customFieldValues)
+            if let position = patch.position { update.set("position", position) }
+            if let partial = patch.customFieldValues {
+                let currentText = try String.fetchOne(d, sql: "SELECT custom_field_values FROM issues WHERE id = ?", arguments: [id.databaseText])
+                var current = try JSONColumn.decodeMap(currentText)
+                current.merge(partial) { _, new in new }
+                update.set("custom_field_values", try JSONColumn.encodeMap(current))
             }
 
-            let query = try update.buildQuery(table: "issues", whereIdEquals: id, returning: columns)
-            let rows = try await connection.query(query, logger: await db.logger)
-            var updated: Issue?
-            for try await row in rows { updated = try map(row) }
+            guard let row = try update.execute(d, table: "issues", id: id.databaseText) else { return nil }
+            let updated = try map(row)
 
             if let repoIds = patch.repoIds {
-                try await connection.query("DELETE FROM issue_repos WHERE issue_id = \(id)", logger: await db.logger)
-                for repoId in repoIds {
-                    try await connection.query(
-                        "INSERT INTO issue_repos (issue_id, repo_id) VALUES (\(id), \(repoId))", logger: await db.logger
-                    )
-                }
+                try d.execute(sql: "DELETE FROM issue_repos WHERE issue_id = ?", arguments: [id.databaseText])
+                try linkRepos(d, issueId: id, repoIds: repoIds)
             }
 
             return updated
@@ -458,32 +472,44 @@ public enum IssueQueries {
     }
 
     public static func deleteIssue(_ db: ZenithDatabase, id: UUID) async throws {
-        try await db.execute("DELETE FROM issues WHERE id = \(id)")
+        try await db.write { d in
+            try d.execute(sql: "DELETE FROM issues WHERE id = ?", arguments: [id.databaseText])
+        }
     }
 
     public static func bulkUpdateStatus(_ db: ZenithDatabase, ids: [UUID], status: IssueStatus) async throws {
         guard !ids.isEmpty else { return }
-        let isClosed = status == .done
-        if isClosed {
-            try await db.execute("""
-                UPDATE issues SET status = \(status.rawValue), is_closed = true, closed_at = now(), updated_at = now()
-                WHERE id = ANY(\(ids))
-                """)
-        } else {
-            try await db.execute("""
-                UPDATE issues SET status = \(status.rawValue), is_closed = false, closed_at = NULL, updated_at = now()
-                WHERE id = ANY(\(ids))
-                """)
+        try await db.write { d in
+            let now = Date()
+            let isClosed = status == .done
+            var arguments: [(any DatabaseValueConvertible)?] = [status.rawValue, isClosed, isClosed ? now : nil, now]
+            arguments.append(contentsOf: ids.map { $0.databaseText })
+            try d.execute(
+                sql: "UPDATE issues SET status = ?, is_closed = ?, closed_at = ?, updated_at = ? WHERE id IN (\(placeholders(ids.count)))",
+                arguments: StatementArguments(arguments)
+            )
         }
     }
 
     public static func bulkUpdatePriority(_ db: ZenithDatabase, ids: [UUID], priority: IssuePriority) async throws {
         guard !ids.isEmpty else { return }
-        try await db.execute("UPDATE issues SET priority = \(priority.rawValue), updated_at = now() WHERE id = ANY(\(ids))")
+        try await db.write { d in
+            var arguments: [(any DatabaseValueConvertible)?] = [priority.rawValue, Date()]
+            arguments.append(contentsOf: ids.map { $0.databaseText })
+            try d.execute(
+                sql: "UPDATE issues SET priority = ?, updated_at = ? WHERE id IN (\(placeholders(ids.count)))",
+                arguments: StatementArguments(arguments)
+            )
+        }
     }
 
     public static func bulkDeleteIssues(_ db: ZenithDatabase, ids: [UUID]) async throws {
         guard !ids.isEmpty else { return }
-        try await db.execute("DELETE FROM issues WHERE id = ANY(\(ids))")
+        try await db.write { d in
+            try d.execute(
+                sql: "DELETE FROM issues WHERE id IN (\(placeholders(ids.count)))",
+                arguments: StatementArguments(ids.map { $0.databaseText })
+            )
+        }
     }
 }

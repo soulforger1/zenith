@@ -50,6 +50,13 @@
       "when": 1788257943995,
       "tag": "0006_round_prowler",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789371492728,
+      "tag": "0007_lyrical_proemial_gods",
+      "breakpoints": true
     }
   ]
 }

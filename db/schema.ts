@@ -6,6 +6,7 @@ import {
   index,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -51,6 +52,10 @@ export const spaceImages = pgTable(
     dataUrl: text("data_url").notNull(),
     label: text("label"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // Added for the Postgres sync target (native app, subtask: local-first
+    // storage) — every synced table needs `updated_at` for last-write-wins
+    // delta detection; this table didn't need one before sync existed.
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("space_images_space_id_idx").on(table.spaceId)],
 );
@@ -243,9 +248,34 @@ export const issueRepos = pgTable(
     repoId: uuid("repo_id")
       .notNull()
       .references(() => repos.id, { onDelete: "cascade" }),
+    // Added for the Postgres sync target — see `spaceImages.updatedAt`.
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("issue_repos_issue_id_repo_id_idx").on(table.issueId, table.repoId),
     index("issue_repos_repo_id_idx").on(table.repoId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Sync tombstones — records a row's deletion for every table the native
+// app's local-first sync layer reconciles, since a plain `DELETE` leaves no
+// trace for another device's next pull to notice. Keyed by
+// `(table_name, row_id)` rather than a FK to any specific table (the row it
+// names is usually already gone by the time this is read). Populated only
+// by the sync target's push path (`ZenithSync.PostgresSyncTarget`) — a
+// manual `psql DELETE` on this database does *not* create a tombstone and
+// so will not propagate to other devices.
+// ---------------------------------------------------------------------------
+export const syncTombstones = pgTable(
+  "sync_tombstones",
+  {
+    tableName: text("table_name").notNull(),
+    rowId: uuid("row_id").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tableName, table.rowId] }),
+    index("sync_tombstones_deleted_at_idx").on(table.deletedAt),
   ],
 );

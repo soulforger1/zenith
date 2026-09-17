@@ -1,5 +1,6 @@
 import Foundation
 import PostgresNIO
+import ZenithData
 
 /// Wires our `Codable` types into PostgresNIO's jsonb encode/decode path.
 /// PostgresNIO gives any `Decodable`/`Encodable` type a free jsonb
@@ -7,7 +8,7 @@ import PostgresNIO
 /// `PostgresEncodable` (see postgres-nio's `JSON+PostgresCodable.swift`) —
 /// these are just the opt-in declarations for the types this app stores as
 /// jsonb columns.
-extension AnyCodableValue: PostgresDecodable, PostgresEncodable {}
+extension AnyCodableValue: @retroactive PostgresDecodable, @retroactive PostgresEncodable {}
 
 /// `issues.custom_field_values` is `Record<string, unknown>` on the TS
 /// side — a plain jsonb object — so a `[String: AnyCodableValue]` can bind

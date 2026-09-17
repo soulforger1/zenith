@@ -1,17 +1,48 @@
 import Foundation
 
-/// Replaces Electron's `userData/config.json` (`electron/main.js`'s
-/// `readConfig`/`writeConfig`) — the one-time setup flow's persisted state.
-/// `databaseUrl` stays here in plain JSON (needed plaintext at startup
-/// anyway, to construct `ZenithDatabase` before anything else can run);
-/// `githubToken` is promoted to the macOS Keychain via `KeychainStore` — a
-/// real security upgrade over the Electron version's plaintext file, and
-/// trivial to do natively.
+/// Persisted app preferences, stored as plain JSON at
+/// `~/Library/Application Support/Zenith/config.json`. Local-first: the app
+/// needs none of this to start (the local SQLite store just opens), so
+/// every field is optional/defaulted and decoding is tolerant of a
+/// pre-local-first `config.json` that only ever had a `databaseUrl` key.
 public struct AppConfig: Codable, Sendable, Equatable {
-    public var databaseUrl: String
+    public enum StorageMode: String, Codable, Sendable {
+        case local
+    }
 
-    public init(databaseUrl: String) {
-        self.databaseUrl = databaseUrl
+    public var storageMode: StorageMode
+    public var sync: SyncSettings
+    /// The connection string from the pre-local-first setup flow, if this
+    /// `config.json` predates it. Used only to offer a one-time import into
+    /// the local store on first launch after upgrading — never written back
+    /// once read, so a fresh `config.json` never has this key.
+    public var legacyDatabaseUrl: String?
+
+    public init(storageMode: StorageMode = .local, sync: SyncSettings = SyncSettings(), legacyDatabaseUrl: String? = nil) {
+        self.storageMode = storageMode
+        self.sync = sync
+        self.legacyDatabaseUrl = legacyDatabaseUrl
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case storageMode, sync
+        case legacyDatabaseUrl = "databaseUrl"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        storageMode = try container.decodeIfPresent(StorageMode.self, forKey: .storageMode) ?? .local
+        sync = try container.decodeIfPresent(SyncSettings.self, forKey: .sync) ?? SyncSettings()
+        legacyDatabaseUrl = try container.decodeIfPresent(String.self, forKey: .legacyDatabaseUrl)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(storageMode, forKey: .storageMode)
+        try container.encode(sync, forKey: .sync)
+        // `legacyDatabaseUrl` is intentionally never written back — once
+        // read (import offered or skipped), config.json settles into the
+        // new shape and drops the plaintext connection string.
     }
 
     public static func configDirectory() throws -> URL {
@@ -28,7 +59,7 @@ public struct AppConfig: Codable, Sendable, Equatable {
     }
 
     /// Returns `nil` if no config exists yet (first run) rather than
-    /// throwing — mirrors `readConfig`'s try/catch-to-null.
+    /// throwing.
     public static func load() -> AppConfig? {
         guard let url = try? configFileURL(), let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONDecoder().decode(AppConfig.self, from: data)
@@ -38,23 +69,5 @@ public struct AppConfig: Codable, Sendable, Equatable {
         let url = try Self.configFileURL()
         let data = try JSONEncoder().encode(self)
         try data.write(to: url, options: .atomic)
-    }
-
-    /// Real connectivity check, not just "is this a well-formed URL" — a
-    /// typo'd password/host fails immediately here instead of surfacing
-    /// later as a silently blank app. Mirrors `electron/main.js`'s
-    /// `validateDatabaseUrl`.
-    public struct ConnectivityError: Error, CustomStringConvertible {
-        public let message: String
-        public var description: String { message }
-    }
-
-    public static func validateDatabaseUrl(_ databaseUrl: String) async -> Result<Void, ConnectivityError> {
-        do {
-            try await ZenithDatabase.testConnection(connectionString: databaseUrl)
-            return .success(())
-        } catch {
-            return .failure(ConnectivityError(message: error.diagnosticDescription))
-        }
     }
 }

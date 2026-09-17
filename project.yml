@@ -10,6 +10,8 @@ packages:
     path: Packages/ZenithData
   ZenithAI:
     path: Packages/ZenithAI
+  ZenithSync:
+    path: Packages/ZenithSync
 
 targets:
   Zenith:
@@ -20,6 +22,7 @@ targets:
     dependencies:
       - package: ZenithData
       - package: ZenithAI
+      - package: ZenithSync
     settings:
       base:
         PRODUCT_NAME: Zenith

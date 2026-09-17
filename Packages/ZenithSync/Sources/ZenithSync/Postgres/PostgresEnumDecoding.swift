@@ -1,4 +1,5 @@
 import PostgresNIO
+import ZenithData
 
 /// `status`/`priority`/`type` columns are plain Postgres `text`, not
 /// `jsonb` — decode as `String` and convert via `RawRepresentable`, rather
@@ -9,7 +10,7 @@ extension PostgresCell {
     func decodeEnum<T: RawRepresentable>(_ type: T.Type) throws -> T where T.RawValue == String {
         let raw = try decode(String.self)
         guard let value = T(rawValue: raw) else {
-            throw DatabaseError.invalidEnumValue(raw, typeName: String(describing: T.self))
+            throw StoreError.invalidEnumValue(raw, typeName: String(describing: T.self))
         }
         return value
     }
@@ -17,7 +18,7 @@ extension PostgresCell {
     func decodeEnum<T: RawRepresentable>(_ type: T?.Type) throws -> T? where T.RawValue == String {
         guard let raw = try decode(String?.self) else { return nil }
         guard let value = T(rawValue: raw) else {
-            throw DatabaseError.invalidEnumValue(raw, typeName: String(describing: T.self))
+            throw StoreError.invalidEnumValue(raw, typeName: String(describing: T.self))
         }
         return value
     }

@@ -1,12 +1,13 @@
 import SwiftUI
 import ZenithData
 
-/// Root view: shows the first-run `SetupView` until a database connection
-/// is configured (mirrors `electron/main.js`'s "no config -> setup window,
-/// else -> main window" branch), then the app shell — a standard
-/// `NavigationSplitView` (sidebar + detail), which is what gives this app
-/// its native macOS chrome (translucent sidebar, traffic lights sitting
-/// over it, standard toolbar) with no custom window hacks needed.
+/// Root view: local-first, so there's no first-run gate on a database
+/// connection any more — the local store opens immediately and the app
+/// goes straight to its `NavigationSplitView` shell. The only thing shown
+/// before that is the brief moment the local store takes to open/migrate,
+/// or a startup error if that somehow fails (e.g. disk full, permissions).
+/// `ImportFromPostgresView` layers on top as a sheet when a pre-local-first
+/// `config.json` offers a one-time import.
 struct ContentView: View {
     @Environment(AppEnvironment.self) private var environment
     // Owned by `ZenithApp` (not here) so the global double-tap-Option
@@ -14,6 +15,7 @@ struct ContentView: View {
     // share the same instance.
     @Environment(AppShellModel.self) private var shell
     @Environment(ToastCenter.self) private var toasts
+    @Environment(DataChangeBroadcaster.self) private var broadcaster
     @State private var spacesModel: SpacesListModel?
     @State private var spaceDetailModels: [UUID: SpaceDetailModel] = [:]
 
@@ -89,17 +91,34 @@ struct ContentView: View {
                         onDismiss: { shell.isCommandPalettePresented = false }
                     )
                 }
-            } else if environment.isConfigured {
-                ProgressView()
+                .sheet(isPresented: Binding(
+                    get: { environment.pendingPostgresImportURL != nil },
+                    set: { if !$0 { environment.dismissPostgresImportOffer() } }
+                )) {
+                    ImportFromPostgresView(connectionString: environment.pendingPostgresImportURL ?? "")
+                }
+            } else if let startupError = environment.startupError {
+                ContentUnavailableView("Couldn't open the local database", systemImage: "exclamationmark.triangle", description: Text(startupError))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                SetupView()
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .toastOverlay(toasts)
         .task(id: environment.database == nil) {
             if let database = environment.database, spacesModel == nil {
                 spacesModel = SpacesListModel(database: database, toasts: toasts)
+            }
+        }
+        // A sync round pulled remote changes — reload everything currently
+        // in memory. Coarse (every open space reloads, not just the
+        // changed rows) but matches the existing "reload after a change"
+        // idiom every view model already uses for its own mutations.
+        .onChange(of: broadcaster.revision) { _, _ in
+            Task { await spacesModel?.load() }
+            for model in spaceDetailModels.values {
+                Task { await model.load() }
             }
         }
     }

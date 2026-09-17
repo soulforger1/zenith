@@ -1,74 +1,84 @@
 import Foundation
-import PostgresNIO
+import GRDB
 
-/// Port of `lib/db/queries/repos.ts`.
+/// Local-store queries for the `repos` table.
 public enum RepoQueries {
-    private static func map(_ row: PostgresRow) throws -> Repo {
-        let r = row.makeRandomAccess()
-        return Repo(
-            id: try r["id"].decode(UUID.self),
-            spaceId: try r["space_id"].decode(UUID.self),
-            name: try r["name"].decode(String.self),
-            url: try r["url"].decode(String.self),
-            cachedContext: try r["cached_context"].decode(String?.self),
-            cachedAt: try r["cached_at"].decode(Date?.self),
-            createdAt: try r["created_at"].decode(Date.self),
-            updatedAt: try r["updated_at"].decode(Date.self)
+    private static func map(_ row: Row) throws -> Repo {
+        Repo(
+            id: try row.requireUUID("id"),
+            spaceId: try row.requireUUID("space_id"),
+            name: try row.requireString("name"),
+            url: try row.requireString("url"),
+            cachedContext: row.optionalString("cached_context"),
+            cachedAt: row.optionalDate("cached_at"),
+            createdAt: try row.requireDate("created_at"),
+            updatedAt: try row.requireDate("updated_at")
         )
     }
 
-    private static let columns = "id, space_id, name, url, cached_context, cached_at, created_at, updated_at"
-
     public static func getReposForSpace(_ db: ZenithDatabase, spaceId: UUID) async throws -> [Repo] {
-        let rows = try await db.query("SELECT \(unescaped: columns) FROM repos WHERE space_id = \(spaceId) ORDER BY name ASC")
-        var results: [Repo] = []
-        for try await row in rows { results.append(try map(row)) }
-        return results
+        try await db.read { d in
+            try Row.fetchAll(d, sql: "SELECT * FROM repos WHERE space_id = ? ORDER BY name ASC", arguments: [spaceId.databaseText])
+                .map(map)
+        }
     }
 
     public static func getRepoById(_ db: ZenithDatabase, id: UUID) async throws -> Repo? {
-        let rows = try await db.query("SELECT \(unescaped: columns) FROM repos WHERE id = \(id) LIMIT 1")
-        for try await row in rows { return try map(row) }
-        return nil
+        try await db.read { d in
+            guard let row = try Row.fetchOne(d, sql: "SELECT * FROM repos WHERE id = ? LIMIT 1", arguments: [id.databaseText]) else {
+                return nil
+            }
+            return try map(row)
+        }
     }
 
     public static func createRepo(_ db: ZenithDatabase, spaceId: UUID, name: String, url: String) async throws -> Repo {
-        let rows = try await db.query("""
-            INSERT INTO repos (space_id, name, url) VALUES (\(spaceId), \(name), \(url))
-            RETURNING \(unescaped: columns)
-            """)
-        for try await row in rows { return try map(row) }
-        throw DatabaseError.insertReturnedNoRow
+        try await db.write { d in
+            let id = UUID()
+            let now = Date()
+            try d.execute(
+                sql: """
+                    INSERT INTO repos (id, space_id, name, url, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                arguments: [id.databaseText, spaceId.databaseText, name, url, now, now]
+            )
+            guard let row = try Row.fetchOne(d, sql: "SELECT * FROM repos WHERE id = ?", arguments: [id.databaseText]) else {
+                throw StoreError.insertReturnedNoRow
+            }
+            return try map(row)
+        }
     }
 
     public static func updateRepo(_ db: ZenithDatabase, id: UUID, name: String?, url: String?) async throws -> Repo? {
-        let rows: PostgresRowSequence
-        switch (name, url) {
-        case (.some(let n), .some(let u)):
-            rows = try await db.query("UPDATE repos SET name = \(n), url = \(u), updated_at = now() WHERE id = \(id) RETURNING \(unescaped: columns)")
-        case (.some(let n), nil):
-            rows = try await db.query("UPDATE repos SET name = \(n), updated_at = now() WHERE id = \(id) RETURNING \(unescaped: columns)")
-        case (nil, .some(let u)):
-            rows = try await db.query("UPDATE repos SET url = \(u), updated_at = now() WHERE id = \(id) RETURNING \(unescaped: columns)")
-        case (nil, nil):
-            rows = try await db.query("SELECT \(unescaped: columns) FROM repos WHERE id = \(id) LIMIT 1")
+        try await db.write { d in
+            var update = DynamicUpdate()
+            if let name { update.set("name", name) }
+            if let url { update.set("url", url) }
+            guard let row = try update.execute(d, table: "repos", id: id.databaseText) else { return nil }
+            return try map(row)
         }
-        for try await row in rows { return try map(row) }
-        return nil
     }
 
     /// Writes the AI-generated summary from a manual "Sync" — the only way
     /// `cachedContext` ever changes; never touched by task-parsing itself.
     public static func setCache(_ db: ZenithDatabase, id: UUID, cachedContext: String) async throws -> Repo? {
-        let rows = try await db.query("""
-            UPDATE repos SET cached_context = \(cachedContext), cached_at = now(), updated_at = now()
-            WHERE id = \(id) RETURNING \(unescaped: columns)
-            """)
-        for try await row in rows { return try map(row) }
-        return nil
+        try await db.write { d in
+            let now = Date()
+            try d.execute(
+                sql: "UPDATE repos SET cached_context = ?, cached_at = ?, updated_at = ? WHERE id = ?",
+                arguments: [cachedContext, now, now, id.databaseText]
+            )
+            guard let row = try Row.fetchOne(d, sql: "SELECT * FROM repos WHERE id = ?", arguments: [id.databaseText]) else {
+                return nil
+            }
+            return try map(row)
+        }
     }
 
     public static func deleteRepo(_ db: ZenithDatabase, id: UUID) async throws {
-        try await db.execute("DELETE FROM repos WHERE id = \(id)")
+        try await db.write { d in
+            try d.execute(sql: "DELETE FROM repos WHERE id = ?", arguments: [id.databaseText])
+        }
     }
 }
